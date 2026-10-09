@@ -13,6 +13,7 @@ import '../models.dart';
 import '../services/backend.dart';
 import '../services/blocks.dart';
 import '../services/payments.dart';
+import '../services/play_billing.dart';
 
 /// App-wide state: the session (guest or logged in), install attribution,
 /// consent, and the user's status (premium, source, storage).
@@ -45,6 +46,10 @@ class AppState extends ChangeNotifier {
   bool get isGuest => status?.isGuest ?? true;
   bool get isPremium => status?.isPremium ?? false;
   bool get hasAdsAccess => status?.hasAdsAccess ?? false;
+
+  /// Cloud storage: Premium; in the Google Play build also the free 15 GB.
+  bool get hasCloud =>
+      isPremium || (PlayBilling.isPlayBuild && (status?.quotaBytes ?? 0) > 0);
   bool get consentGiven => _prefs.getString('consent') == Config.policyVersion;
   String? get email => sb.auth.currentUser?.email;
   String? get userId => sb.auth.currentUser?.id;
@@ -100,11 +105,21 @@ class AppState extends ChangeNotifier {
 
   Future<void> refreshStatus() async {
     try {
-      final s = await Backend.status();
+      var s = await Backend.status();
+      // Google Play build: logged-in users get 15 GB of free cloud storage.
+      if (PlayBilling.isPlayBuild &&
+          s != null &&
+          !s.isGuest &&
+          !s.isPremium &&
+          s.quotaBytes == 0) {
+        await Backend.enablePlayFreeCloud();
+        s = await Backend.status();
+      }
       final changed =
           s?.isPremium != status?.isPremium ||
           s?.source != status?.source ||
-          s?.isGuest != status?.isGuest;
+          s?.isGuest != status?.isGuest ||
+          s?.quotaBytes != status?.quotaBytes;
       status = s;
       notifyListeners();
       if (changed && ready) bumpContent();

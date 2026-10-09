@@ -933,5 +933,31 @@ select t.fails($$select public.report_content_in_app(null, null, 'Spam')$$, 'rep
 select t.fails($$select public.report_content_in_app((select id from public.posts limit 1), null, '')$$, 'report needs a reason');
 reset role;
 select t.ok((select count(*) from public.support_requests where name = 'In-app report') = 2, 'in-app reports reach the admin Requests');
+
+-- Google Play version: 15 GB free cloud after login (Premium stays 2 TB)
+set role authenticated;
+select t.act_as('organic_guest');
+select public.enable_play_free_cloud();
+select t.ok((public.my_status()->>'quota_bytes')::bigint = 0, 'guests get no free cloud');
+select t.act_as('organic_user');
+select t.fails($$insert into public.cloud_files (name, is_folder) values ('Free', true)$$,
+               'without the Play allowance, free users still cannot use cloud');
+select public.enable_play_free_cloud();
+select t.ok((public.my_status()->>'quota_bytes')::bigint = 16106127360, 'Play users get 15 GB');
+select t.ok(not (public.my_status()->>'is_premium')::boolean, 'free cloud does not make the user premium');
+insert into public.cloud_files (id, name, is_folder) values ('50000000-0000-0000-0000-000000000002', 'Free', true);
+insert into public.cloud_files (parent_id, name, storage_key, mime, size)
+values ('50000000-0000-0000-0000-000000000002', 'b.pdf', t.id('organic_user') || '/1-b.pdf', 'application/pdf', 2000);
+insert into storage.objects (bucket_id, name) values ('cloud', t.id('organic_user') || '/1-b.pdf');
+select t.fails($$insert into public.cloud_files (name, storage_key, mime, size)
+                 values ('big.bin', t.id('organic_user') || '/2-big.bin', 'application/octet-stream', 16106127360)$$,
+               'the 15 GB limit is enforced');
+select public.enable_play_free_cloud();
+select t.ok((select used_bytes from public.profiles where id = t.id('organic_user')) = 2000, 'calling it again changes nothing');
+select t.act_as('owner');
+select public.grant_premium(t.id('organic_user'), 'gold');
+select t.act_as('organic_user');
+select t.ok((public.my_status()->>'quota_bytes')::bigint = 2199023255552, 'premium users get 2 TB, not 15 GB');
+reset role;
 \echo
 \echo 'All tests passed.'

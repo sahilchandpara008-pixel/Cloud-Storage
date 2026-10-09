@@ -7,6 +7,7 @@ import '../screens/player_screen.dart';
 import '../screens/premium_screen.dart';
 import '../services/backend.dart';
 import '../services/downloads.dart';
+import '../services/play_billing.dart';
 import '../state/app_state.dart';
 import 'common.dart';
 
@@ -160,6 +161,27 @@ Future<void> _play(
 /// get a plan (the normal plans screen).
 Future<bool> ensurePremiumForDownload(BuildContext context) async {
   if (app.isPremium) return true;
+  // Google Play build: no plans to buy in the app, just say what it is.
+  if (PlayBilling.isPlayBuild) {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        icon: const Icon(Icons.download_rounded, size: 36),
+        title: const Text('Download is a Premium feature'),
+        content: const Text(
+          'Downloads are available to Premium members.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+    return false;
+  }
   final go = await showDialog<bool>(
     context: context,
     builder: (_) => AlertDialog(

@@ -182,6 +182,9 @@ export default async function HomePage() {
         <div className="mx-auto max-w-5xl px-5 py-20">
           <h2 className="text-center text-3xl font-bold md:text-4xl">Choose Your Best Flixvault Plan</h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-gray-600">Unlock premium privileges and supercharge your cloud storage.</p>
+          <p className="mx-auto mt-4 max-w-xl rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-center text-sm text-green-800">
+            <b>Free on Google Play:</b> log in and get 15 GB of cloud storage free. Premium plans are not sold in the Google Play version.
+          </p>
           <div className="mt-10 grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm">
               <div className="flex items-center gap-2">
@@ -194,7 +197,7 @@ export default async function HomePage() {
                   <li key={f} className="flex items-center gap-2 text-gray-800"><span className="text-green-600">✓</span>{f}</li>
                 ))}
               </ul>
-              <a href={PLAY_URL} className="mt-7 block rounded-lg bg-[#FF7A1A] py-3 text-center font-semibold text-white">Choose Premium</a>
+              <Link href="/d" className="mt-7 block rounded-lg bg-[#FF7A1A] py-3 text-center font-semibold text-white">Choose Premium</Link>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm">
               <h3 className="font-bold">Select Your Plan</h3>
@@ -209,8 +212,8 @@ export default async function HomePage() {
                   </div>
                 ))}
               </div>
-              <a href={PLAY_URL} className="mt-5 block rounded-lg bg-[#FF7A1A] py-3 text-center font-semibold text-white">Get Flixvault to subscribe</a>
-              <p className="mt-2 text-center text-xs text-gray-500">Buy in the app with any UPI app. Plans don&apos;t renew automatically.</p>
+              <Link href="/d" className="mt-5 block rounded-lg bg-[#FF7A1A] py-3 text-center font-semibold text-white">Download the app to subscribe</Link>
+              <p className="mt-2 text-center text-xs text-gray-500">Buy in the app downloaded from this website, with any UPI app. Plans don&apos;t renew automatically.</p>
             </div>
           </div>
         </div>

@@ -184,115 +184,129 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
                   icon: Icons.hourglass_top,
                   text: 'Your ${s!.openRequest} request is being processed.',
                 ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: AppColors.gradient,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x40FF7A1A),
-                      blurRadius: 24,
-                      offset: Offset(0, 10),
-                    ),
-                  ],
+              // Google Play build: no plans or payments in the app.
+              if (PlayBilling.isPlayBuild && s?.isPremium != true)
+                _PlayFreeAccount(
+                  onLogIn: () async {
+                    if (await ensureLoggedIn(
+                      context,
+                      reason: 'Log in to get 15 GB of free cloud storage.',
+                    )) {
+                      await app.refreshStatus();
+                    }
+                  },
                 ),
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 5,
+              if (!PlayBilling.isPlayBuild) ...[
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.gradient,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x40FF7A1A),
+                        blurRadius: 24,
+                        offset: Offset(0, 10),
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.gold,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.workspace_premium,
-                            size: 18,
-                            color: AppColors.ink,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            'Premium',
-                            style: TextStyle(
-                              color: AppColors.ink,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    for (final perk in perks)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 5),
-                        child: Row(
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.gold,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Container(
-                              width: 26,
-                              height: 26,
-                              decoration: const BoxDecoration(
-                                color: Color(0x33FFFFFF),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 18,
-                              ),
+                            Icon(
+                              Icons.workspace_premium,
+                              size: 18,
+                              color: AppColors.ink,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                perk,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Premium',
+                              style: TextStyle(
+                                color: AppColors.ink,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
                               ),
                             ),
                           ],
                         ),
                       ),
-                  ],
+                      const SizedBox(height: 14),
+                      for (final perk in perks)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 5),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 26,
+                                height: 26,
+                                decoration: const BoxDecoration(
+                                  color: Color(0x33FFFFFF),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  perk,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              RadioGroup<String>(
-                groupValue: selected,
-                onChanged: (v) => setState(() => selected = v),
-                child: Column(
-                  children: [
-                    for (final p in plans!)
-                      _PlanCard(
-                        plan: p,
-                        selected: p.id == selected,
-                        onTap: () => setState(() => selected = p.id),
-                      ),
-                  ],
+                const SizedBox(height: 16),
+                RadioGroup<String>(
+                  groupValue: selected,
+                  onChanged: (v) => setState(() => selected = v),
+                  child: Column(
+                    children: [
+                      for (final p in plans!)
+                        _PlanCard(
+                          plan: p,
+                          selected: p.id == selected,
+                          onTap: () => setState(() => selected = p.id),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              FilledButton(
-                onPressed: sending || selected == null ? null : _next,
-                child: Text(
-                  sending
-                      ? 'Opening UPI…'
-                      : selected == null
-                      ? 'Select a plan'
-                      : app.isGuest
-                      ? 'Next'
-                      : 'Continue to payment',
+                const SizedBox(height: 8),
+                FilledButton(
+                  onPressed: sending || selected == null ? null : _next,
+                  child: Text(
+                    sending
+                        ? 'Opening UPI…'
+                        : selected == null
+                        ? 'Select a plan'
+                        : app.isGuest
+                        ? 'Next'
+                        : 'Continue to payment',
+                  ),
                 ),
-              ),
+              ],
             ],
           );
         },
@@ -401,6 +415,59 @@ class _Banner extends StatelessWidget {
           Icon(icon),
           const SizedBox(width: 10),
           Expanded(child: Text(text, style: const TextStyle(fontSize: 15))),
+        ],
+      ),
+    );
+  }
+}
+
+/// Google Play build, free users: the free cloud allowance and their status.
+/// No prices and no way to pay here.
+class _PlayFreeAccount extends StatelessWidget {
+  final VoidCallback onLogIn;
+  const _PlayFreeAccount({required this.onLogIn});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = app.status;
+    final loggedIn = !app.isGuest;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.cloud_done_outlined, color: AppColors.primary),
+              SizedBox(width: 10),
+              Text(
+                'Free account',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            loggedIn && s != null && s.quotaBytes > 0
+                ? 'You have ${formatBytes(s.quotaBytes)} of free cloud storage. '
+                      '${formatBytes(s.usedBytes)} used.'
+                : 'Log in to get 15 GB of free cloud storage for your photos, videos and files.',
+            style: const TextStyle(fontSize: 15),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Premium plans are not available in this version of the app.',
+            style: TextStyle(fontSize: 13, color: AppColors.muted),
+          ),
+          if (!loggedIn) ...[
+            const SizedBox(height: 14),
+            FilledButton(onPressed: onLogIn, child: const Text('Log in')),
+          ],
         ],
       ),
     );

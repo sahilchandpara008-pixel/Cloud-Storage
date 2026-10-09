@@ -19,6 +19,9 @@ class Backend {
     return UserStatus.fromJson(Map<String, dynamic>.from(res as Map));
   }
 
+  /// Google Play build only: 15 GB of free cloud storage after login.
+  static Future<void> enablePlayFreeCloud() => sb.rpc('enable_play_free_cloud');
+
   static Future<String?> recordInstall(
     String installId,
     String status,
