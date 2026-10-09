@@ -37,9 +37,11 @@ Future<void> reportContent(
                 ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  leading: Icon(reason == r
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked),
+                  leading: Icon(
+                    reason == r
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                  ),
                   title: Text(r),
                   onTap: () => setState(() => reason = r),
                 ),

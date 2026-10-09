@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config.dart';
 import '../models.dart';
 import '../services/backend.dart';
 import '../services/payments.dart';
@@ -161,7 +162,7 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              if (s?.isPremium == true)
+              if (s?.isPremium == true && s?.planName != null)
                 _Banner(
                   color: AppColors.successBg,
                   icon: Icons.verified,
@@ -184,9 +185,9 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
                   icon: Icons.hourglass_top,
                   text: 'Your ${s!.openRequest} request is being processed.',
                 ),
-              // Google Play build: no plans or payments in the app.
-              if (PlayBilling.isPlayBuild && s?.isPremium != true)
-                _PlayFreeAccount(
+              // Free mode / Google Play build: no plans or payments.
+              if (app.noPlans && (app.freeMode || s?.isPremium != true))
+                _FreeAccount(
                   onLogIn: () async {
                     if (await ensureLoggedIn(
                       context,
@@ -195,8 +196,15 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
                       await app.refreshStatus();
                     }
                   },
+                  onRequest: () async {
+                    try {
+                      await app.requestFullAccess();
+                    } catch (e) {
+                      if (context.mounted) showSnack(context, friendlyError(e));
+                    }
+                  },
                 ),
-              if (!PlayBilling.isPlayBuild) ...[
+              if (!app.noPlans) ...[
                 Container(
                   decoration: BoxDecoration(
                     gradient: AppColors.gradient,
@@ -421,16 +429,18 @@ class _Banner extends StatelessWidget {
   }
 }
 
-/// Google Play build, free users: the free cloud allowance and their status.
-/// No prices and no way to pay here.
-class _PlayFreeAccount extends StatelessWidget {
+/// Free mode / Google Play build: cloud allowance, full-access status and
+/// (free mode) the request for full access. No prices and no way to pay.
+class _FreeAccount extends StatelessWidget {
   final VoidCallback onLogIn;
-  const _PlayFreeAccount({required this.onLogIn});
+  final VoidCallback onRequest;
+  const _FreeAccount({required this.onLogIn, required this.onRequest});
 
   @override
   Widget build(BuildContext context) {
     final s = app.status;
     final loggedIn = !app.isGuest;
+    final free = app.freeMode;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -441,29 +451,81 @@ class _PlayFreeAccount extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.cloud_done_outlined, color: AppColors.primary),
-              SizedBox(width: 10),
+              const Icon(Icons.cloud_done_outlined, color: AppColors.primary),
+              const SizedBox(width: 10),
               Text(
-                'Free account',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                free ? '${Config.appName} is free' : 'Free account',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             loggedIn && s != null && s.quotaBytes > 0
-                ? 'You have ${formatBytes(s.quotaBytes)} of free cloud storage. '
+                ? 'You have ${formatBytes(s.quotaBytes)} of cloud storage. '
                       '${formatBytes(s.usedBytes)} used.'
                 : 'Log in to get 15 GB of free cloud storage for your photos, videos and files.',
             style: const TextStyle(fontSize: 15),
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Premium plans are not available in this version of the app.',
-            style: TextStyle(fontSize: 13, color: AppColors.muted),
-          ),
+          if (free && loggedIn) ...[
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            if (app.isPremium)
+              const Row(
+                children: [
+                  Icon(Icons.verified, color: AppColors.gold),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Full access: all videos and downloads are unlocked.',
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  ),
+                ],
+              )
+            else if (s?.accessStatus == 'pending')
+              const Row(
+                children: [
+                  Icon(Icons.hourglass_top),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Your request for full access is being reviewed.',
+                      style: TextStyle(fontSize: 15),
+                    ),
+                  ),
+                ],
+              )
+            else if (s?.accessStatus == 'rejected')
+              const Text(
+                'Full access was not approved for this account.',
+                style: TextStyle(fontSize: 15),
+              )
+            else ...[
+              const Text(
+                'Some videos and downloads need approval from our team.',
+                style: TextStyle(fontSize: 15),
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: onRequest,
+                child: const Text('Request full access'),
+              ),
+            ],
+          ],
+          if (!free) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Premium plans are not available in this version of the app.',
+              style: TextStyle(fontSize: 13, color: AppColors.muted),
+            ),
+          ],
           if (!loggedIn) ...[
             const SizedBox(height: 14),
             FilledButton(onPressed: onLogIn, child: const Text('Log in')),

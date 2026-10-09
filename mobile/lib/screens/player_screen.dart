@@ -132,7 +132,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
         ),
         title: const Text('Enjoyed the trailer?'),
         content: Text(
-          guest
+          app.freeMode
+              ? (guest
+                    ? 'Log in to watch the full video for free.'
+                    : 'Get full access to watch the full video.')
+              : guest
               ? 'Please subscribe to watch the full content seamlessly. '
                     'Log in and choose a plan to continue.'
               : 'Please subscribe to watch the full content seamlessly.',
@@ -146,7 +150,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: Text(guest ? 'Log in & subscribe' : 'Subscribe now'),
+            child: Text(
+              app.freeMode
+                  ? (guest ? 'Log in' : 'Get full access')
+                  : guest
+                  ? 'Log in & subscribe'
+                  : 'Subscribe now',
+            ),
           ),
         ],
       ),

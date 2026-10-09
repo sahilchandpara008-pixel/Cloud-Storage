@@ -19,6 +19,10 @@ class Backend {
     return UserStatus.fromJson(Map<String, dynamic>.from(res as Map));
   }
 
+  /// Free mode: an organic user asks the owner for full access.
+  static Future<String?> requestFullAccess() async =>
+      await sb.rpc('request_full_access') as String?;
+
   /// Google Play build only: 15 GB of free cloud storage after login.
   static Future<void> enablePlayFreeCloud() => sb.rpc('enable_play_free_cloud');
 

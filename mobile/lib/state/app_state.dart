@@ -47,9 +47,22 @@ class AppState extends ChangeNotifier {
   bool get isPremium => status?.isPremium ?? false;
   bool get hasAdsAccess => status?.hasAdsAccess ?? false;
 
-  /// Cloud storage: Premium; in the Google Play build also the free 15 GB.
-  bool get hasCloud =>
-      isPremium || (PlayBilling.isPlayBuild && (status?.quotaBytes ?? 0) > 0);
+  /// Free mode (set on the server): no plans, everyone logged in gets 15 GB,
+  /// full access for ads users and approved organic users.
+  bool get freeMode => status?.freeMode ?? false;
+
+  /// No plans or payments in the app: free mode, or the Google Play build.
+  bool get noPlans => freeMode || PlayBilling.isPlayBuild;
+
+  /// Cloud storage: Premium, or the free 15 GB (free mode / Play build).
+  bool get hasCloud => isPremium || (status?.quotaBytes ?? 0) > 0;
+
+  /// Free mode: organic user asks for full access (admin → Approvals).
+  Future<void> requestFullAccess() async {
+    await Backend.requestFullAccess();
+    await refreshStatus();
+  }
+
   bool get consentGiven => _prefs.getString('consent') == Config.policyVersion;
   String? get email => sb.auth.currentUser?.email;
   String? get userId => sb.auth.currentUser?.id;
@@ -119,7 +132,8 @@ class AppState extends ChangeNotifier {
           s?.isPremium != status?.isPremium ||
           s?.source != status?.source ||
           s?.isGuest != status?.isGuest ||
-          s?.quotaBytes != status?.quotaBytes;
+          s?.quotaBytes != status?.quotaBytes ||
+          s?.freeMode != status?.freeMode;
       status = s;
       notifyListeners();
       if (changed && ready) bumpContent();

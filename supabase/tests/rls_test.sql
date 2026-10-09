@@ -10,6 +10,9 @@ set client_min_messages = notice;
 create schema t;
 grant usage on schema t to anon, authenticated, service_role;
 
+-- Most tests below check the paid-plan rules; free mode is tested at the end.
+update public.app_mode set free_mode = false;
+
 create function t.ok(cond boolean, msg text) returns void language plpgsql as $$
 begin
   if cond is distinct from true then
@@ -959,5 +962,35 @@ select public.grant_premium(t.id('organic_user'), 'gold');
 select t.act_as('organic_user');
 select t.ok((public.my_status()->>'quota_bytes')::bigint = 2199023255552, 'premium users get 2 TB, not 15 GB');
 reset role;
+
+-- Free mode: no plans; ads users (and approved organic users) get full access,
+-- organic users ask for it; everyone logged in gets 15 GB of cloud.
+delete from public.subscriptions;
+update public.profiles set ads_access_status = 'none', free_cloud_bytes = 0
+ where id in (t.id('organic_user'), t.id('ads_user'));
+update public.app_mode set free_mode = true;
+set role authenticated;
+select t.act_as('ads_user');
+select t.ok(public.is_premium_user(), 'free mode: ads users get full access without a plan');
+select t.ok((public.my_status()->>'quota_bytes')::bigint = 16106127360, 'free mode: 15 GB cloud');
+select t.ok((public.my_status()->>'free_mode')::boolean, 'status says free mode');
+select t.act_as('organic_user');
+select t.ok(not public.is_premium_user(), 'free mode: organic users need approval for full content');
+select t.ok((public.my_status()->>'quota_bytes')::bigint = 16106127360, 'free mode: organic users get 15 GB cloud too');
+insert into public.cloud_files (name, is_folder) values ('Mine', true);
+select t.ok(public.request_full_access() = 'pending', 'organic user can ask for full access');
+select t.ok(public.request_full_access() = 'pending', 'asking again keeps it pending');
+select t.act_as('organic_guest');
+select t.ok(not public.is_premium_user(), 'guests have no full access');
+select t.ok((public.my_status()->>'quota_bytes')::bigint = 0, 'guests have no cloud');
+select t.fails($$select public.request_full_access()$$, 'guests must log in to ask');
+select t.act_as('owner');
+select public.set_ads_access(t.id('organic_user'), 'approved');
+select t.act_as('organic_user');
+select t.ok(public.is_premium_user(), 'approved organic users get full access');
+select t.ok(public.request_full_access() = 'approved', 'approved users see approved');
+update public.app_mode set free_mode = false;  -- RLS: matches no rows for app users
+reset role;
+select t.ok((select free_mode from public.app_mode) , 'free mode unchanged by app users');
 \echo
 \echo 'All tests passed.'

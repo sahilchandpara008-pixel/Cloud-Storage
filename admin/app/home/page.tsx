@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SUPPORT_EMAIL } from "@/lib/policies";
-import { createPublicClient } from "@/lib/supabase/server";
 
 // Public website (shown at "/" to visitors who are not logged in to the admin panel).
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Flixvault – 2 TB Cloud Storage & Creator Channels",
+  title: "Flixvault – Free Cloud Storage & Creator Channels",
   description:
     "Simple, secure and swift. Back up photos, videos and documents in the cloud, share them, and watch creator channels.",
   robots: { index: true },
@@ -15,12 +14,7 @@ export const metadata: Metadata = {
 
 const PLAY_URL = "https://play.google.com/store/apps/details?id=com.flixvault.app";
 
-type Plan = { code: string; name: string; duration_days: number; price_inr: number };
-
-const PREMIUM = ["2 TB cloud storage", "Full premium videos", "Ad-free experience", "Ultra-fast downloads", "Upload & manage your channel"];
-
-const days = (d: number) =>
-  d % 365 === 0 ? `${d / 365} Year` : d % 30 === 0 ? `${d / 30} Month${d > 30 ? "s" : ""}` : `${d} Days`;
+const FREE = ["15 GB cloud storage", "Creator channels and videos", "Free trailers", "Upload & manage your own channel", "No ads, no payments"];
 
 function PlayButton({ light = false }: { light?: boolean }) {
   return (
@@ -41,14 +35,7 @@ function PlayButton({ light = false }: { light?: boolean }) {
   );
 }
 
-export default async function HomePage() {
-  const { data } = await createPublicClient()
-    .from("plans")
-    .select("code, name, duration_days, price_inr")
-    .eq("active", true)
-    .order("position");
-  const plans = (data ?? []) as Plan[];
-
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
       {/* Header */}
@@ -62,7 +49,7 @@ export default async function HomePage() {
           <nav className="ml-auto hidden items-center gap-7 text-sm font-medium text-gray-600 md:flex">
             <a href="#backup" className="hover:text-gray-900">Features</a>
             <a href="#security" className="hover:text-gray-900">Security</a>
-            <a href="#plans" className="hover:text-gray-900">Plans</a>
+            <a href="#free" className="hover:text-gray-900">Free</a>
             <Link href="/privacy" className="hover:text-gray-900">Privacy</Link>
             <a href={PLAY_URL} className="rounded-lg bg-[#FF7A1A] px-4 py-2 text-white">Get the app</a>
           </nav>
@@ -73,7 +60,7 @@ export default async function HomePage() {
             <div className="absolute right-0 mt-2 w-48 rounded-xl border border-gray-100 bg-white p-2 text-sm shadow-xl">
               <a href="#backup" className="block rounded-lg px-3 py-2 hover:bg-gray-50">Features</a>
               <a href="#security" className="block rounded-lg px-3 py-2 hover:bg-gray-50">Security</a>
-              <a href="#plans" className="block rounded-lg px-3 py-2 hover:bg-gray-50">Plans</a>
+              <a href="#free" className="block rounded-lg px-3 py-2 hover:bg-gray-50">Free</a>
               <Link href="/privacy" className="block rounded-lg px-3 py-2 hover:bg-gray-50">Privacy Policy</Link>
               <a href={PLAY_URL} className="mt-1 block rounded-lg bg-[#FF7A1A] px-3 py-2 text-center font-semibold text-white">Get the app</a>
             </div>
@@ -89,7 +76,7 @@ export default async function HomePage() {
         <div className="relative mx-auto max-w-4xl px-5 py-24 text-center md:py-32">
           <p className="mx-auto mb-5 inline-block rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold">Now in Early Access</p>
           <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight md:text-7xl">
-            2 TB Cloud Storage <br className="hidden md:block" />for Everyone
+            Free Cloud Storage <br className="hidden md:block" />for Everyone
           </h1>
           <p className="mx-auto mt-6 max-w-xl text-lg text-white/80">
             Simple, Secure, and Swift. Your digital life — and your favourite creator channels — organised in one app.
@@ -164,7 +151,7 @@ export default async function HomePage() {
           <div>
             <h2 className="text-3xl font-bold md:text-4xl">Channels &amp; Creator Content</h2>
             <p className="mt-4 text-lg leading-relaxed text-gray-600">
-              Follow channels, watch free trailers and unlock full videos with Premium. Anyone can create a channel and
+              Follow channels, watch free trailers and full videos. Anyone can create a channel and
               share content — and all channels are user-generated and managed, with strong safeguards:
             </p>
             <ol className="mt-5 space-y-2 text-gray-700">
@@ -177,44 +164,22 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Plans */}
-      <section id="plans" className="scroll-mt-20 bg-gray-50">
-        <div className="mx-auto max-w-5xl px-5 py-20">
-          <h2 className="text-center text-3xl font-bold md:text-4xl">Choose Your Best Flixvault Plan</h2>
-          <p className="mx-auto mt-3 max-w-xl text-center text-gray-600">Unlock premium privileges and supercharge your cloud storage.</p>
-          <p className="mx-auto mt-4 max-w-xl rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-center text-sm text-green-800">
-            <b>Free on Google Play:</b> log in and get 15 GB of cloud storage free. Premium plans are not sold in the Google Play version.
-          </p>
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xl font-bold">Premium</h3>
-                <span className="rounded bg-[#FF7A1A] px-2 py-0.5 text-xs font-semibold text-white">Popular</span>
-              </div>
-              <p className="mt-2 text-gray-600">For individuals and power users who need more space, full videos and features.</p>
-              <ul className="mt-6 space-y-2">
-                {PREMIUM.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-gray-800"><span className="text-green-600">✓</span>{f}</li>
-                ))}
-              </ul>
-              <Link href="/d" className="mt-7 block rounded-lg bg-[#FF7A1A] py-3 text-center font-semibold text-white">Choose Premium</Link>
+      {/* Free */}
+      <section id="free" className="scroll-mt-20 bg-gray-50">
+        <div className="mx-auto max-w-3xl px-5 py-20 text-center">
+          <h2 className="text-3xl font-bold md:text-4xl">Flixvault is Free</h2>
+          <p className="mx-auto mt-3 max-w-xl text-gray-600">No plans and no payments. Download the app, log in and start.</p>
+          <div className="mx-auto mt-10 max-w-md rounded-2xl border border-gray-200 bg-white p-7 text-left shadow-sm">
+            <ul className="space-y-2">
+              {FREE.map((f) => (
+                <li key={f} className="flex items-center gap-2 text-gray-800"><span className="text-green-600">✓</span>{f}</li>
+              ))}
+            </ul>
+            <div className="mt-7 flex flex-wrap justify-center gap-3">
+              <PlayButton />
+              <Link href="/d" className="inline-flex items-center rounded-lg border border-gray-300 px-5 py-3 font-semibold hover:bg-gray-50">Download APK</Link>
             </div>
-            <div className="rounded-2xl border border-gray-200 bg-white p-7 shadow-sm">
-              <h3 className="font-bold">Select Your Plan</h3>
-              <div className="mt-4 space-y-2">
-                {plans.map((p, i) => (
-                  <div key={p.code} className={`flex items-center justify-between rounded-xl border px-4 py-3 ${i === 2 ? "border-[#FF7A1A] bg-orange-50" : "border-gray-200"}`}>
-                    <div>
-                      <p className="font-semibold">{p.name}</p>
-                      <p className="text-xs text-gray-500">{days(p.duration_days)}</p>
-                    </div>
-                    <p className="text-lg font-bold text-[#E25A00]">₹{p.price_inr}</p>
-                  </div>
-                ))}
-              </div>
-              <Link href="/d" className="mt-5 block rounded-lg bg-[#FF7A1A] py-3 text-center font-semibold text-white">Download the app to subscribe</Link>
-              <p className="mt-2 text-center text-xs text-gray-500">Buy in the app downloaded from this website, with any UPI app. Plans don&apos;t renew automatically.</p>
-            </div>
+            <p className="mt-4 text-center text-xs text-gray-500">Some videos and downloads need full access, given by our team.</p>
           </div>
         </div>
       </section>

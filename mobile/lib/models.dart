@@ -12,6 +12,8 @@ class UserStatus {
   final int usedBytes;
   final int quotaBytes;
   final String? openRequest;
+  final bool freeMode; // app is free: no plans, approval flow only
+  final String accessStatus; // none | pending | approved | rejected
 
   const UserStatus({
     required this.userId,
@@ -25,6 +27,8 @@ class UserStatus {
     this.usedBytes = 0,
     this.quotaBytes = 0,
     this.openRequest,
+    this.freeMode = false,
+    this.accessStatus = 'none',
   });
 
   factory UserStatus.fromJson(Map<String, dynamic> j) => UserStatus(
@@ -41,6 +45,8 @@ class UserStatus {
     usedBytes: (j['used_bytes'] as num?)?.toInt() ?? 0,
     quotaBytes: (j['quota_bytes'] as num?)?.toInt() ?? 0,
     openRequest: j['open_request'] as String?,
+    freeMode: (j['free_mode'] as bool?) ?? false,
+    accessStatus: (j['access_status'] as String?) ?? 'none',
   );
 }
 

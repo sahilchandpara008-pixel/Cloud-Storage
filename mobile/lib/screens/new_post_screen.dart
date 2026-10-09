@@ -6,6 +6,7 @@ import 'package:fc_native_video_thumbnail/fc_native_video_thumbnail.dart';
 import '../config.dart';
 import '../models.dart';
 import '../services/backend.dart';
+import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
@@ -213,8 +214,11 @@ class _NewPostScreenState extends State<NewPostScreen> {
         builder: (_) => AlertDialog(
           title: const Text('Add a trailer?'),
           content: Text(
-            '$noTrailer video(s) have no trailer. Users from ads can watch '
-            'trailers for free; without one they only see the plans.',
+            app.freeMode
+                ? '$noTrailer video(s) have no trailer. Users from ads can '
+                      'watch a trailer before they log in.'
+                : '$noTrailer video(s) have no trailer. Users from ads can watch '
+                      'trailers for free; without one they only see the plans.',
           ),
           actions: [
             TextButton(

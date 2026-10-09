@@ -339,7 +339,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    s.isPremium ? '${s.planName} active' : 'Free account',
+                    s.planName != null
+                        ? '${s.planName} active'
+                        : s.isPremium
+                        ? 'Full access'
+                        : 'Free account',
                     style: const TextStyle(fontSize: 16),
                   ),
                 ],

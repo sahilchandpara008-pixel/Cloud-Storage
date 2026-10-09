@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config.dart';
 import '../models.dart';
 import '../services/backend.dart';
-import '../services/play_billing.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -88,10 +87,10 @@ class _CloudScreenState extends State<CloudScreen> with ContentReload {
     reload();
   }
 
-  /// No cloud yet: the Play build asks guests to log in (free 15 GB);
+  /// No cloud yet: free mode / Play build asks guests to log in (free 15 GB);
   /// the shared APKs open the Premium plans as before.
   Future<void> _getCloud() async {
-    if (!PlayBilling.isPlayBuild) {
+    if (!app.noPlans) {
       await openPlans(context);
       return;
     }
@@ -356,7 +355,7 @@ class _CloudScreenState extends State<CloudScreen> with ContentReload {
                       content: Text(
                         premium
                             ? 'Used ${formatBytes(app.status!.usedBytes)} of ${formatBytes(app.status!.quotaBytes)}.'
-                            : PlayBilling.isPlayBuild
+                            : app.noPlans
                             ? 'Log in to get 15 GB of free cloud storage for your photos, videos and files.'
                             : 'Get a Premium plan to store your photos, videos and files (2 TB).',
                       ),
@@ -407,7 +406,7 @@ class _CloudScreenState extends State<CloudScreen> with ContentReload {
 
   Widget _body(bool premium) {
     if (!premium) {
-      if (PlayBilling.isPlayBuild) {
+      if (app.noPlans) {
         return EmptyState(
           message: 'Store your photos, videos and files safely.\nLog in to get 15 GB of free cloud storage.',
           action: FilledButton(

@@ -161,6 +161,32 @@ Future<void> _play(
 /// get a plan (the normal plans screen).
 Future<bool> ensurePremiumForDownload(BuildContext context) async {
   if (app.isPremium) return true;
+  // Free mode: downloads come with full access (approval for organic users).
+  if (app.freeMode) {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        icon: const Icon(Icons.download_rounded, size: 36),
+        title: const Text('Download needs full access'),
+        content: const Text(
+          'Downloads are available once your account has full access.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Get full access'),
+          ),
+        ],
+      ),
+    );
+    if (go == true && context.mounted) await openPlans(context);
+    return false;
+  }
   // Google Play build: no plans to buy in the app, just say what it is.
   if (PlayBilling.isPlayBuild) {
     await showDialog<void>(

@@ -21,10 +21,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const FEATURES = [
-  ["🎬", "Premium videos", "Watch full shows and videos from top creators."],
-  ["▶️", "Free trailers", "Preview any premium video before you subscribe."],
-  ["☁️", "2 TB cloud storage", "Keep your photos, videos and files safe."],
-  ["⚡", "Pay with UPI", "GPay, PhonePe, Paytm or any UPI app. No card needed."],
+  ["🎬", "Full videos", "Watch full shows and videos from top creators."],
+  ["▶️", "Free trailers", "Preview videos with a free trailer."],
+  ["☁️", "15 GB cloud storage", "Keep your photos, videos and files safe."],
+  ["🆓", "Completely free", "No plans and no payments. Just log in."],
 ];
 
 export default async function DownloadPage() {
