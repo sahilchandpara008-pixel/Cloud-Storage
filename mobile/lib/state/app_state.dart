@@ -52,7 +52,7 @@ class AppState extends ChangeNotifier {
   bool get freeMode => status?.freeMode ?? false;
 
   /// No plans or payments in the app: free mode, or the Google Play build.
-  bool get noPlans => freeMode || PlayBilling.isPlayBuild;
+  bool get noPlans => freeMode || PlayBilling.hidesPlans;
 
   /// Cloud storage: Premium, or the free 15 GB (free mode / Play build).
   bool get hasCloud => isPremium || (status?.quotaBytes ?? 0) > 0;

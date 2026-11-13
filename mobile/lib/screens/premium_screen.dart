@@ -63,7 +63,7 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
     try {
       // Play Store build only: Google's information screen + report token.
       String? playToken;
-      if (PlayBilling.isPlayBuild) {
+      if (PlayBilling.hidesPlans) {
         try {
           playToken = await PlayBilling.prepare();
         } on PlayBillingException catch (e) {

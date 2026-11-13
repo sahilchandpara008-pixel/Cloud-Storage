@@ -42,11 +42,13 @@ jobs:
             --dart-define=APK_REFERRER="utm_source=meta&utm_medium=paid_social&utm_campaign=apk_download"
           cp build/app/outputs/flutter-apk/app-direct-release.apk ../dist/Flixvault-ads.apk
 
-      # Google Play build (upload to Play Console): same app + Google's
-      # "alternative billing only" info screen and transaction reporting.
+      # Google Play build (upload to Play Console). Owner's decision (Nov 2026):
+      # it shows the plans and takes the same UPI payment as the shared APKs.
+      # Google Play's Payments policy does not allow this, so review may reject
+      # it; remove PLAY_SELLS_UPI=true to hide the plans in the Play build again.
       - name: Build Play Store bundle
         run: |
-          flutter build appbundle --release --flavor play --dart-define=PLAY_STORE=true
+          flutter build appbundle --release --flavor play --dart-define=PLAY_STORE=true --dart-define=PLAY_SELLS_UPI=true
           cp build/app/outputs/bundle/playRelease/app-play-release.aab ../dist/Flixvault-play.aab
 
       - uses: actions/upload-artifact@v4

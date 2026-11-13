@@ -188,7 +188,7 @@ Future<bool> ensurePremiumForDownload(BuildContext context) async {
     return false;
   }
   // Google Play build: no plans to buy in the app, just say what it is.
-  if (PlayBilling.isPlayBuild) {
+  if (PlayBilling.hidesPlans) {
     await showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(

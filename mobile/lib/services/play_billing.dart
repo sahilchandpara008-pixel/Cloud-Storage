@@ -8,6 +8,13 @@ import 'package:flutter/services.dart';
 /// never call this, so their payment flow is unchanged.
 class PlayBilling {
   static const isPlayBuild = bool.fromEnvironment('PLAY_STORE');
+
+  /// Owner's choice: the Play build also shows the plans and takes the same
+  /// UPI payment as the shared APKs (--dart-define=PLAY_SELLS_UPI=true).
+  static const sellsUpi = bool.fromEnvironment('PLAY_SELLS_UPI');
+
+  /// Play build without plans (the default for a Play build).
+  static const hidesPlans = isPlayBuild && !sellsUpi;
   static const _channel = MethodChannel('cloudstorage/playbilling');
 
   /// Returns the token, or throws [PlayBillingException].
