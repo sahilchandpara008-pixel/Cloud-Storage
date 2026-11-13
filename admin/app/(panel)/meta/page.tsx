@@ -1,10 +1,10 @@
 import { headers } from "next/headers";
 import { ApkUpload } from "@/components/apk-upload";
 import { CopyButton } from "@/components/copy-button";
-import { Badge, Button, Card, Empty, Flash, Input, PageHeader, Select, Table, Td, Th } from "@/components/ui";
+import { Badge, Button, Card, Empty, Flash, Input, PageHeader, Table, Td, Th } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
-import { saveMeta, sendTestEvent } from "./actions";
+import { connectMeta, saveMetaExtras, sendTestEvent, turnTrackingOff } from "./actions";
 
 type Settings = {
   pixel_id: string | null;
@@ -63,21 +63,6 @@ function mask(token: string | null) {
   return `••••••••${token.slice(-4)}`;
 }
 
-function Step({ done, children }: { done: boolean; children: React.ReactNode }) {
-  return (
-    <li className="flex items-start gap-3">
-      <span
-        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-          done ? "bg-green-600 text-white" : "bg-gray-200 text-gray-500"
-        }`}
-      >
-        {done ? "✓" : ""}
-      </span>
-      <span className={done ? "text-gray-700" : "text-gray-900"}>{children}</span>
-    </li>
-  );
-}
-
 export default async function MetaPage({
   searchParams,
 }: {
@@ -106,24 +91,45 @@ export default async function MetaPage({
     <>
       <PageHeader
         title="Meta Pixel"
-        subtitle="Enter your Pixel ID and access token once. The Pixel is added to the download page automatically and every app event is sent to Meta for you."
+        subtitle="Enter your Pixel ID and access token once. Everything else is automatic."
       />
       <Flash ok={sp.ok} error={sp.error} />
 
       <Card className="mb-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-semibold">Setup for ROAS ads</h2>
-          {ready && settings.apk_url ? <Badge tone="green">Ready to run ads</Badge> : <Badge tone="amber">Setup not finished</Badge>}
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="font-semibold">Connect your Pixel</h2>
+          {ready ? <Badge tone="green">Connected · tracking on</Badge> : <Badge tone="amber">Not connected</Badge>}
         </div>
-        <ol className="space-y-2 text-sm">
-          <Step done={!!settings.pixel_id}>Pixel ID saved</Step>
-          <Step done={!!settings.access_token}>Conversions API access token saved</Step>
-          <Step done={settings.enabled}>Tracking turned on</Step>
-          <Step done={!!settings.apk_url}>APK uploaded for the download page (use <b>Flixvault-ads.apk</b>)</Step>
-          <Step done={settings.action_source === "website"}>
-            Event source set to <b>Download page (website)</b> — needed for Sales campaigns that optimise for purchase value
-          </Step>
-        </ol>
+        <p className="mb-4 text-sm text-gray-600">
+          Paste the two values and press the button. That is all: the Pixel is added to the download page, and every
+          app version (website APK, ads APK and Google Play) reports installs, sign-ups, checkouts and purchases with
+          the amount paid. No app update is needed.
+        </p>
+        <form action={connectMeta} className="grid gap-4 sm:grid-cols-2">
+          <input type="hidden" name="origin" value={origin} />
+          <label className="text-sm font-medium">
+            Pixel ID
+            <Input name="pixel_id" defaultValue={settings.pixel_id ?? ""} placeholder="e.g. 123456789012345" inputMode="numeric" required />
+          </label>
+          <label className="text-sm font-medium">
+            Access token
+            <Input name="access_token" type="password" placeholder={settings.access_token ? `Saved (${mask(settings.access_token)}) — leave empty to keep` : "Paste the token"} autoComplete="off" />
+          </label>
+          <div className="flex flex-wrap gap-2 sm:col-span-2">
+            <Button type="submit">{ready ? "Save" : "Connect and turn tracking on"}</Button>
+          </div>
+        </form>
+        {settings.enabled && (
+          <form action={turnTrackingOff} className="mt-2">
+            <Button variant="secondary" type="submit">Turn tracking off</Button>
+          </form>
+        )}
+        {ready && !settings.apk_url && (
+          <p className="mt-4 rounded bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            One more thing before running ads: upload <b>Flixvault-ads.apk</b> under <b>Download page and testing</b> below,
+            so the download page has a file to give.
+          </p>
+        )}
         <div className="mt-5 grid gap-3 text-sm">
           <div>
             <p className="mb-1 font-medium">Download page (open it to check)</p>
@@ -154,25 +160,9 @@ export default async function MetaPage({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         <Card>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold">Settings</h2>
-            {settings.enabled ? <Badge tone="green">Tracking on</Badge> : <Badge>Tracking off</Badge>}
-          </div>
-          <form action={saveMeta} className="grid gap-4">
-            <input type="hidden" name="origin" value={origin} />
-            <label className="text-sm font-medium">
-              Pixel ID (dataset ID)
-              <Input name="pixel_id" defaultValue={settings.pixel_id ?? ""} placeholder="e.g. 123456789012345" inputMode="numeric" />
-            </label>
-            <label className="text-sm font-medium">
-              Conversions API access token
-              <Input name="access_token" type="password" placeholder={settings.access_token ? `Saved (${mask(settings.access_token)}) — leave empty to keep` : "Paste the token"} autoComplete="off" />
-              <input type="hidden" name="has_token" value={settings.access_token ? "1" : "0"} />
-            </label>
-            <label className="text-sm font-medium">
-              Test event code <span className="font-normal text-gray-500">(optional, only while testing)</span>
-              <Input name="test_event_code" defaultValue={settings.test_event_code ?? ""} placeholder="e.g. TEST12345" />
-            </label>
+          <h2 className="mb-1 font-semibold">Download page and testing</h2>
+          <p className="mb-4 text-sm text-gray-600">Optional. Tracking works without changing anything here.</p>
+          <form action={saveMetaExtras} className="grid gap-4">
             <div className="text-sm font-medium">
               App file for the download page
               <ApkUpload defaultValue={settings.apk_url} />
@@ -186,17 +176,8 @@ export default async function MetaPage({
               <Input name="page_subtitle" defaultValue={settings.page_subtitle ?? ""} maxLength={160} />
             </label>
             <label className="text-sm font-medium">
-              Event source
-              <Select name="action_source" defaultValue={settings.action_source}>
-                <option value="website">Download page / website (recommended for ROAS)</option>
-                <option value="app">App events</option>
-              </Select>
-              <span className="mt-1 block text-xs font-normal text-gray-500">
-                Keep “Download page” when your ads send people to the download page above.
-              </span>
-            </label>
-            <label className="flex items-center gap-2 text-sm font-medium">
-              <input type="checkbox" name="enabled" defaultChecked={settings.enabled} className="h-4 w-4" /> Tracking on
+              Test event code <span className="font-normal text-gray-500">(only while testing in Events Manager)</span>
+              <Input name="test_event_code" defaultValue={settings.test_event_code ?? ""} placeholder="e.g. TEST12345" />
             </label>
             <div className="flex flex-wrap gap-2">
               <Button type="submit">Save</Button>
@@ -236,7 +217,7 @@ export default async function MetaPage({
             <ol className="list-decimal space-y-1 pl-5 text-sm text-gray-600">
               <li>Open Meta <b>Events Manager</b> → <b>Data sources</b> → your Pixel/dataset (create one if needed). Copy its ID.</li>
               <li>In that dataset open <b>Settings</b> → <b>Conversions API</b> → <b>Generate access token</b>. Copy it.</li>
-              <li>Paste both here, upload the APK, tick <b>Tracking on</b> and Save.</li>
+              <li>Paste both at the top of this page and press <b>Connect and turn tracking on</b>.</li>
               <li>To check: in Events Manager open <b>Test events</b>, copy the test code, paste it above, Save, then press <b>Send test event</b>. Remove the test code when done.</li>
             </ol>
             <p className="mt-4 text-xs text-gray-500">
