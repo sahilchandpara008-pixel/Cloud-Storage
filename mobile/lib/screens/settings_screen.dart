@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
@@ -18,6 +19,17 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _busy = false;
+  String? _version;
+
+  @override
+  void initState() {
+    super.initState();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) {
+        setState(() => _version = 'Version ${info.version} (${info.buildNumber})');
+      }
+    });
+  }
 
   Future<void> _logout() async {
     setState(() => _busy = true);
@@ -108,6 +120,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const Spacer(),
+          if (_version != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                _version!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+            ),
           if (registered)
             SafeArea(
               child: Padding(
