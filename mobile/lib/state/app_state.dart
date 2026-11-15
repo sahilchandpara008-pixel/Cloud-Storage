@@ -178,18 +178,40 @@ class AppState extends ChangeNotifier {
   /// Google login in the browser. The session comes back through the
   /// [authRedirect] deep link (handled by supabase_flutter); the login screen
   /// then calls [afterExternalLogin].
+  ///
+  /// Every user starts as a guest (anonymous session). Just like
+  /// [createAccount] upgrades that guest to an email account with the same
+  /// user id, this links Google to the same guest account when possible, so
+  /// signing in with Google never loses a guest's files, free storage or an
+  /// active plan. If linking isn't available (Supabase's "allow manual
+  /// linking" setting is off, or there's no guest session to link), it falls
+  /// back to an ordinary Google sign-in, same as before.
   Future<void> signInWithGoogle() async {
     if (!await _providerEnabled('google')) {
       throw StateError(
         'Google sign-in is coming soon. Please log in with email.',
       );
     }
+    final redirectTo = kIsWeb ? null : authRedirect;
+    final launchMode = kIsWeb
+        ? LaunchMode.platformDefault
+        : LaunchMode.externalApplication;
+    if (sb.auth.currentUser?.isAnonymous ?? false) {
+      try {
+        await sb.auth.linkIdentity(
+          OAuthProvider.google,
+          redirectTo: redirectTo,
+          authScreenLaunchMode: launchMode,
+        );
+        return;
+      } catch (_) {
+        // Falls through to a normal sign-in below.
+      }
+    }
     await sb.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: kIsWeb ? null : authRedirect,
-      authScreenLaunchMode: kIsWeb
-          ? LaunchMode.platformDefault
-          : LaunchMode.externalApplication,
+      redirectTo: redirectTo,
+      authScreenLaunchMode: launchMode,
     );
   }
 
