@@ -4,12 +4,16 @@ import { signOut } from "../login/actions";
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const { supabase, user, role } = await requireAdmin();
-  const { data: stats } = await supabase.rpc("admin_dashboard");
+  const isOwner = role === "owner";
+  const [{ data: stats }, { data: requests }, { data: pendingPayments }, { data: openSupport }] =
+    await Promise.all([
+      supabase.rpc("admin_dashboard"),
+      isOwner ? supabase.rpc("admin_plan_requests") : Promise.resolve({ data: [] }),
+      isOwner ? supabase.rpc("admin_pending_payments") : Promise.resolve({ data: 0 }),
+      isOwner ? supabase.rpc("admin_open_support_requests") : Promise.resolve({ data: 0 }),
+    ]);
   const pending = Number(stats?.pending_approvals ?? 0);
-  const { data: requests } = role === "owner" ? await supabase.rpc("admin_plan_requests") : { data: [] };
   const openRequests = (requests ?? []).length;
-  const { data: pendingPayments } = role === "owner" ? await supabase.rpc("admin_pending_payments") : { data: 0 };
-  const { data: openSupport } = role === "owner" ? await supabase.rpc("admin_open_support_requests") : { data: 0 };
 
   const items = [
     { href: "/", label: "Dashboard" },

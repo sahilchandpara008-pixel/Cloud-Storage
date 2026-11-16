@@ -99,7 +99,7 @@ export default async function ChannelsPage({
               <div key={r.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
                 {r.icon_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={r.icon_url} alt="" className="h-12 w-12 rounded-full object-cover" />
+                  <img src={r.icon_url} alt="" loading="lazy" decoding="async" className="h-12 w-12 rounded-full object-cover" />
                 ) : (
                   <div className="h-12 w-12 rounded-full bg-gray-200" />
                 )}

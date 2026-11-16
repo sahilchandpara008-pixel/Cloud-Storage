@@ -115,7 +115,13 @@ export default async function PostsPage({
                     <Link href={`/posts/${p.id}`} className="flex items-center gap-3 font-medium text-gray-900 hover:text-red-700">
                       {thumb ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={publicUrl(thumb)!} alt="" className="h-10 w-10 shrink-0 rounded object-cover" />
+                        <img
+                          src={publicUrl(thumb)!}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="h-10 w-10 shrink-0 rounded object-cover"
+                        />
                       ) : (
                         <span className="h-10 w-10 shrink-0 rounded bg-gray-100" />
                       )}

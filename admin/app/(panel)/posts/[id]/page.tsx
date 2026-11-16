@@ -77,7 +77,13 @@ export default async function PostPage({
                 <div className="flex items-center gap-3">
                   {item.thumb_key ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={publicUrl(item.thumb_key)!} alt="" className="h-14 w-14 shrink-0 rounded-md object-cover" />
+                    <img
+                      src={publicUrl(item.thumb_key)!}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="h-14 w-14 shrink-0 rounded-md object-cover"
+                    />
                   ) : (
                     <div className="h-14 w-14 shrink-0 rounded-md bg-gray-100" />
                   )}
