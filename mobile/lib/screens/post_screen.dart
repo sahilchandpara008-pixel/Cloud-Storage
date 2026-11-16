@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 
-import '../config.dart';
 import '../models.dart';
 import '../services/backend.dart';
 import '../theme.dart';
@@ -64,10 +62,6 @@ class _PostScreenState extends State<PostScreen> {
     MaterialPageRoute(builder: (_) => ChannelScreen(channelId: p.channelId)),
   );
 
-  void _share(Post p) => SharePlus.instance.share(
-    ShareParams(text: '${p.title} — watch it on ${Config.appName}'),
-  );
-
   @override
   Widget build(BuildContext context) {
     final p = post;
@@ -77,17 +71,6 @@ class _PostScreenState extends State<PostScreen> {
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         leading: const _GlassBack(),
-        actions: [
-          if (p != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: _GlassIcon(
-                icon: Icons.share_rounded,
-                tooltip: 'Share',
-                onTap: () => _share(p),
-              ),
-            ),
-        ],
       ),
       body: p == null
           ? (error != null
@@ -147,11 +130,6 @@ class _PostScreenState extends State<PostScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  _ActionIcon(
-                    icon: Icons.send_rounded,
-                    label: 'Share',
-                    onTap: () => _share(p),
-                  ),
                   _ActionIcon(
                     icon: Icons.video_library_outlined,
                     label: 'Channel',

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 
-import '../config.dart';
 import '../models.dart';
 import '../screens/post_screen.dart';
 import '../theme.dart';
@@ -55,10 +53,6 @@ class PostBubble extends StatelessWidget {
         ],
       ),
     ),
-  );
-
-  void _share() => SharePlus.instance.share(
-    ShareParams(text: '${post.title} — watch it on ${Config.appName}'),
   );
 
   @override
@@ -206,24 +200,7 @@ class PostBubble extends StatelessWidget {
                 ],
               ),
             ),
-            // Actions (existing ones only)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 2, 4, 4),
-              child: Row(
-                children: [
-                  const Spacer(),
-                  IconButton(
-                    tooltip: 'Share',
-                    icon: const Icon(
-                      Icons.send_rounded,
-                      size: 20,
-                      color: AppColors.muted,
-                    ),
-                    onPressed: _share,
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
