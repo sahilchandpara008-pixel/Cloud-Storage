@@ -403,6 +403,13 @@ insert into public.plan_requests (plan_id) select id from public.plans where cod
 select t.ok(public.my_status()->>'open_request' = 'Gold Plan', 'status shows the open request');
 select t.act_as('owner');
 select t.ok((select count(*) from public.admin_plan_requests()) = 1, 'owner sees open plan requests');
+
+-- A registered but non-premium user cannot create a channel yet.
+select t.act_as('organic_user');
+select t.fails($$insert into public.channels (name) values ('Too early')$$,
+               'a free (non-premium) user cannot create a channel');
+
+select t.act_as('owner');
 select public.grant_premium(t.id('organic_user'), 'gold');
 select t.ok((select count(*) from public.admin_plan_requests()) = 0, 'granting a plan closes the request');
 

@@ -710,6 +710,9 @@ String friendlyError(Object e) {
   if (text.contains('3 channels waiting')) {
     return 'You already have 3 channels waiting for approval.';
   }
+  if (text.contains('an active plan is required to create a channel')) {
+    return 'Creating a channel needs a Premium plan.';
+  }
   if (text.contains('quota')) return 'Not enough storage space left.';
   if (text.contains('plan_requests_one_open')) {
     return 'You already have a plan request waiting.';

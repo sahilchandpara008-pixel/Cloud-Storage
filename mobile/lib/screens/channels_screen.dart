@@ -149,6 +149,8 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
               return;
             }
             if (!context.mounted) return;
+            if (!await ensurePremiumForChannel(context)) return;
+            if (!context.mounted) return;
             await Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const CreateChannelScreen()),
             );

@@ -173,7 +173,7 @@ class _CreateChannelScreenState extends State<CreateChannelScreen> {
                         strokeWidth: 2,
                       ),
                     )
-                  : const Text('Send for approval'),
+                  : const Text('Create'),
             ),
           ],
         ),

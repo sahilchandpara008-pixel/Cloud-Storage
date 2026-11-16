@@ -47,6 +47,36 @@ Future<void> openPlans(BuildContext context) {
   );
 }
 
+/// Only a premium member may create a channel (the server enforces this
+/// too). A free user is sent to Premium with an explanation instead of
+/// opening the create-channel form.
+Future<bool> ensurePremiumForChannel(BuildContext context) async {
+  if (app.isPremium) return true;
+  final go = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      icon: const Icon(Icons.workspace_premium_outlined, size: 36),
+      title: const Text('Premium needed to create a channel'),
+      content: const Text(
+        'Creating your own channel is a Premium feature. Get a plan to start uploading.',
+        textAlign: TextAlign.center,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Not now'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('See plans'),
+        ),
+      ],
+    ),
+  );
+  if (go == true && context.mounted) await openPlans(context);
+  return false;
+}
+
 /// The creator always sees their own content in full; otherwise premium
 /// items need a plan.
 bool canWatchFull(Post post, PostItem item) {

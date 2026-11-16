@@ -106,6 +106,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return;
     }
     if (!mounted) return;
+    if (!await ensurePremiumForChannel(context)) return;
+    if (!mounted) return;
     final ok = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const CreateChannelScreen()),
     );
