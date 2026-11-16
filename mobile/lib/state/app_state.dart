@@ -4,6 +4,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:play_install_referrer/play_install_referrer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
@@ -103,15 +104,40 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Ads APK carries APK_REFERRER; the plain APK has none ("direct").
+  /// Ads APK carries APK_REFERRER baked in at build time ("apk"). The Play
+  /// Store build instead asks Google for the real click referrer -- the
+  /// same UTM string tacked onto the Play Store link an ad pointed at
+  /// (e.g. ...&referrer=utm_source%3Dmeta%26utm_campaign%3D...) -- so a Play
+  /// Store install can be credited to the ad that led to it, not just a
+  /// direct-APK download.
   Future<void> _recordInstall() async {
     if (_prefs.getBool('install_recorded') == true) return;
-    final hasReferrer = Config.apkReferrer.isNotEmpty;
-    final source = await Backend.recordInstall(
-      installId,
-      hasReferrer ? 'apk' : 'not_available',
-      hasReferrer ? Config.apkReferrer : null,
-    );
+
+    String status;
+    String? referrer;
+    DateTime? clickTs;
+
+    if (PlayBilling.isPlayBuild) {
+      try {
+        // Throws if Play Services is unavailable; otherwise this is Google's
+        // real click referrer, not a guess.
+        final details = await PlayInstallReferrer.installReferrer;
+        status = 'ok';
+        referrer = details.installReferrer;
+        final seconds = details.referrerClickTimestampSeconds;
+        if (seconds > 0) {
+          clickTs = DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
+        }
+      } catch (_) {
+        status = 'not_available';
+      }
+    } else {
+      final hasReferrer = Config.apkReferrer.isNotEmpty;
+      status = hasReferrer ? 'apk' : 'not_available';
+      referrer = hasReferrer ? Config.apkReferrer : null;
+    }
+
+    final source = await Backend.recordInstall(installId, status, referrer, clickTs: clickTs);
     await _prefs.setBool('install_recorded', true);
     await _prefs.setString('install_source', source ?? 'unknown');
   }

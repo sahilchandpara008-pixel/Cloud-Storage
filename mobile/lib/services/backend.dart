@@ -31,14 +31,16 @@ class Backend {
   static Future<String?> recordInstall(
     String installId,
     String status,
-    String? referrer,
-  ) async {
+    String? referrer, {
+    DateTime? clickTs,
+  }) async {
     final res = await sb.rpc(
       'record_install',
       params: {
         'p_install_id': installId,
         'p_referrer_status': status,
         'p_referrer': referrer,
+        'p_click_ts': clickTs?.toUtc().toIso8601String(),
         'p_install_ts': DateTime.now().toUtc().toIso8601String(),
       },
     );
