@@ -377,6 +377,23 @@ delete from public.cloud_files where id = '50000000-0000-0000-0000-000000000001'
 select t.ok((select used_bytes from public.profiles where id = t.id('ads_user')) = 0,
             'deleting a folder frees the space of its files');
 
+-- Bunny-backed cloud files (storage_key and bunny_path are mutually exclusive)
+select t.fails($$insert into public.cloud_files (name, storage_key, bunny_path, mime, size)
+                 values ('both.pdf', t.id('ads_user') || '/x', t.id('ads_user') || '/y', 'application/pdf', 1)$$,
+               'a cloud file cannot have both a storage_key and a bunny_path');
+select t.fails($$insert into public.cloud_files (name, is_folder, bunny_path) values ('Bad', true, t.id('ads_user') || '/y')$$,
+               'a folder cannot have a bunny_path');
+insert into public.cloud_files (id, name, is_folder) values ('50000000-0000-0000-0000-000000000003', 'Bunny', true);
+insert into public.cloud_files (parent_id, name, bunny_path, mime, size)
+values ('50000000-0000-0000-0000-000000000003', 'b.pdf', t.id('ads_user') || '/2-b.pdf', 'application/pdf', 2000);
+select t.ok((select used_bytes from public.profiles where id = t.id('ads_user')) = 2000,
+            'bunny-backed files count toward used_bytes the same way');
+select t.ok((select count(*) from public.cloud_folder_bunny_paths('50000000-0000-0000-0000-000000000003')) = 1,
+            'folder bunny paths include nested files');
+delete from public.cloud_files where id = '50000000-0000-0000-0000-000000000003';
+select t.ok((select used_bytes from public.profiles where id = t.id('ads_user')) = 0,
+            'deleting a bunny-backed folder frees its space too');
+
 -- Plan requests
 select t.act_as('ads_guest');
 select t.fails($$insert into public.plan_requests (plan_id) select id from public.plans where code = 'gold'$$,

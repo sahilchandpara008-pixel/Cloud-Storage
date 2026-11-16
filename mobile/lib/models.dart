@@ -240,6 +240,9 @@ class CloudFile {
   final String name;
   final bool isFolder;
   final String? storageKey;
+
+  /// Set instead of [storageKey] for a file saved on Bunny Storage.
+  final String? bunnyPath;
   final String? mime;
   final int size;
   final DateTime createdAt;
@@ -250,6 +253,7 @@ class CloudFile {
     required this.name,
     required this.isFolder,
     this.storageKey,
+    this.bunnyPath,
     this.mime,
     this.size = 0,
     required this.createdAt,
@@ -257,6 +261,7 @@ class CloudFile {
 
   bool get isImage => (mime ?? '').startsWith('image/');
   bool get isVideo => (mime ?? '').startsWith('video/');
+  bool get isBunnyBacked => bunnyPath != null;
 
   factory CloudFile.fromJson(Map<String, dynamic> j) => CloudFile(
     id: j['id'] as String,
@@ -264,6 +269,7 @@ class CloudFile {
     name: j['name'] as String,
     isFolder: j['is_folder'] as bool,
     storageKey: j['storage_key'] as String?,
+    bunnyPath: j['bunny_path'] as String?,
     mime: j['mime'] as String?,
     size: (j['size'] as num?)?.toInt() ?? 0,
     createdAt: DateTime.parse(j['created_at'] as String).toLocal(),

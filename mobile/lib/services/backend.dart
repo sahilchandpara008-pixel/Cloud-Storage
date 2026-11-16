@@ -494,34 +494,45 @@ class Backend {
     });
   }
 
+  /// Uploads a personal cloud file to Bunny Storage (the Edge Function holds
+  /// the storage zone's password; the phone never sees it) and records it.
   static Future<void> uploadCloudFile(
     String? parentId,
     String name,
     Uint8List bytes,
     String? mime,
   ) async {
-    final uid = sb.auth.currentUser!.id;
-    final safe = name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final key = '$uid/${_uuid.v4()}-$safe';
-    await sb.storage
-        .from('cloud')
-        .uploadBinary(key, bytes, fileOptions: FileOptions(contentType: mime));
-    try {
-      await sb.from('cloud_files').insert({
-        'parent_id': parentId,
-        'name': name,
-        'storage_key': key,
-        'mime': mime,
-        'size': bytes.length,
-      });
-    } catch (e) {
-      await sb.storage.from('cloud').remove([key]); // e.g. quota exceeded
-      rethrow;
+    final res = await sb.functions.invoke(
+      'cloud-upload',
+      method: HttpMethod.post,
+      body: bytes,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-File-Name': Uri.encodeComponent(name),
+        if (parentId != null) 'X-Parent-Id': parentId,
+        if (mime != null) 'X-File-Mime': mime,
+      },
+    );
+    if (res.status != 200) {
+      throw Exception((res.data as Map?)?['error'] ?? 'Upload failed');
     }
   }
 
-  static Future<String> cloudUrl(String key) =>
-      sb.storage.from('cloud').createSignedUrl(key, 60 * 60);
+  /// Short-lived link to download a cloud file. Bunny-backed files are
+  /// signed by the cloud-download-url Edge Function; older, Supabase-stored
+  /// files keep using the storage bucket's own signed URL.
+  static Future<String> cloudUrl(CloudFile f) async {
+    if (f.isBunnyBacked) {
+      final res = await sb.functions.invoke(
+        'cloud-download-url',
+        body: {'file_id': f.id},
+      );
+      final url = (res.data as Map?)?['url'] as String?;
+      if (url == null) throw StateError('This file is not available right now.');
+      return url;
+    }
+    return sb.storage.from('cloud').createSignedUrl(f.storageKey!, 60 * 60);
+  }
 
   static Future<void> renameCloudFile(String id, String name) async {
     await sb.from('cloud_files').update({'name': name}).eq('id', id);
@@ -533,13 +544,25 @@ class Backend {
             'cloud_folder_keys',
             params: {'p_folder_id': f.id},
           )) as List).cast<String>()
-        : [f.storageKey!];
+        : (f.storageKey == null ? const <String>[] : [f.storageKey!]);
     for (var i = 0; i < keys.length; i += 100) {
       await sb.storage
           .from('cloud')
           .remove(
             keys.sublist(i, i + 100 > keys.length ? keys.length : i + 100),
           );
+    }
+    final bunnyPaths = f.isFolder
+        ? ((await sb.rpc(
+            'cloud_folder_bunny_paths',
+            params: {'p_folder_id': f.id},
+          )) as List).cast<String>()
+        : (f.bunnyPath == null ? const <String>[] : [f.bunnyPath!]);
+    if (bunnyPaths.isNotEmpty) {
+      await sb.functions.invoke(
+        'cloud-delete',
+        body: {'paths': bunnyPaths},
+      );
     }
     await sb.from('cloud_files').delete().eq('id', f.id);
   }

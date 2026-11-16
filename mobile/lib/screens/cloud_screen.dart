@@ -57,7 +57,7 @@ class _CloudScreenState extends State<CloudScreen> with ContentReload {
       return;
     }
     try {
-      final url = await Backend.cloudUrl(f.storageKey!);
+      final url = await Backend.cloudUrl(f);
       if (!mounted) return;
       if (f.isVideo) {
         Navigator.of(context).push(

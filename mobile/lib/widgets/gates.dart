@@ -281,12 +281,7 @@ Future<void> downloadItem(
 
 /// Download one of the user's own cloud files (premium).
 Future<void> downloadCloudFile(BuildContext context, CloudFile f) async {
-  if (f.storageKey == null) return;
+  if (f.storageKey == null && f.bunnyPath == null) return;
   if (!await ensurePremiumForDownload(context) || !context.mounted) return;
-  await _saveFrom(
-    context,
-    () => Backend.cloudUrl(f.storageKey!),
-    f.name,
-    f.mime,
-  );
+  await _saveFrom(context, () => Backend.cloudUrl(f), f.name, f.mime);
 }
