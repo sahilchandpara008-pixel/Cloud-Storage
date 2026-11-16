@@ -557,9 +557,14 @@ create function t.plan_end(p text) returns timestamptz language sql stable secur
 grant execute on function t.order_status(text), t.plan_end(text) to authenticated;
 
 set role authenticated;
+-- Guest checkout: a guest can buy a plan too, without signing up first.
 select t.act_as('ads_guest');
-select t.fails($$select public.create_payment_order((select id from public.plans where code = 'gold'))$$,
-               'guest cannot create a payment order');
+select t.put('go', public.create_payment_order((select id from public.plans where code = 'gold'))->>'order_id');
+select t.ok((select user_id from public.payment_orders where id = t.get('go')::uuid) = t.id('ads_guest'),
+            'a guest can create a payment order tied to their own (guest) account');
+select t.ok((public.report_payment_result(t.get('go')::uuid, 'Status=SUCCESS&ApprovalRefNo=627312300099')->>'status') = 'approved',
+            'a guest can complete checkout and become premium without signing up');
+select t.ok(public.is_premium_user(), 'the guest is premium right after paying');
 
 select t.act_as('ads_user');
 select t.put('o1', public.create_payment_order((select id from public.plans where code = 'silver'))->>'order_id');
@@ -670,7 +675,7 @@ select t.fails($$select public.admin_mark_payment_paid(t.get('o4')::uuid, 'BANKU
                'content admin cannot mark payments as paid');
 select t.fails($$select * from public.admin_payment_orders()$$, 'content admin cannot list payments');
 select t.act_as('owner');
-select t.ok((select count(*) from public.admin_payment_orders('all')) = 4, 'owner sees all orders');
+select t.ok((select count(*) from public.admin_payment_orders('all')) = 5, 'owner sees all orders');
 select t.ok((select count(*) from public.admin_payment_orders('pending')) = 1, 'owner can filter pending orders');
 select t.ok((select upi_response from public.admin_payment_orders('pending')) like '%AXI444444%',
             'owner sees the raw UPI answer');

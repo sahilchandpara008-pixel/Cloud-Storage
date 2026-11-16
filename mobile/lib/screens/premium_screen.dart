@@ -46,19 +46,13 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
   }
 
   /// Server creates the order (amount from the plans table), then the UPI app
-  /// opens. The result screen shows only what the server decided.
+  /// opens. The result screen shows only what the server decided. Guests can
+  /// buy a plan without logging in first -- it stays tied to their current
+  /// (anonymous) account, which they can later turn into a real one from
+  /// Profile without losing it.
   Future<void> _next() async {
     final plan = plans?.firstWhere((p) => p.id == selected);
     if (plan == null) return;
-    // Guests log in first and come back here with the plan still selected;
-    // the button then reads "Continue to payment".
-    if (app.isGuest) {
-      await ensureLoggedIn(
-        context,
-        reason: 'Please log in to buy ${plan.name}.',
-      );
-      return;
-    }
     setState(() => sending = true);
     try {
       // Play Store build only: Google's information screen + report token.
@@ -309,8 +303,6 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
                         ? 'Opening UPI…'
                         : selected == null
                         ? 'Select a plan'
-                        : app.isGuest
-                        ? 'Next'
                         : 'Continue to payment',
                   ),
                 ),
