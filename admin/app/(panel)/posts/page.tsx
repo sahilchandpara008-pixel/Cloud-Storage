@@ -58,7 +58,12 @@ export default async function PostsPage({
       <PageHeader
         title="Posts"
         subtitle="Everything posted to channels. Published posts appear in the app's Explore and Feed."
-        action={<LinkButton href={sp.channel ? `/posts/new?channel=${sp.channel}` : "/posts/new"}>New post</LinkButton>}
+        action={
+          <div className="flex gap-2">
+            <LinkButton variant="secondary" href="/posts/bulk">Bulk upload</LinkButton>
+            <LinkButton href={sp.channel ? `/posts/new?channel=${sp.channel}` : "/posts/new"}>New post</LinkButton>
+          </div>
+        }
       />
       <Flash ok={sp.ok} error={sp.error} />
 
