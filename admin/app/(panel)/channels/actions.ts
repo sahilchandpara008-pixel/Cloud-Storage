@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin, requireOwner } from "@/lib/auth";
 import { withMessage } from "@/lib/format";
+import { removeItemStorage } from "@/lib/media-cleanup";
 
 function friendly(message: string) {
   return message.includes("row-level security") ? "You don't have permission to change this." : message;
@@ -55,12 +56,26 @@ export async function updateChannel(id: string, formData: FormData) {
 
 export async function deleteChannel(id: string) {
   const { supabase } = await requireAdmin();
+
+  // Clean up every post's media and Bunny video before the cascade delete
+  // removes the rows (and their keys) for good.
+  const { data: posts } = await supabase.from("posts").select("id").eq("channel_id", id);
+  const postIds = (posts ?? []).map((p) => p.id as string);
+  if (postIds.length > 0) {
+    const { data: items } = await supabase
+      .from("post_items")
+      .select("media_key, thumb_key, trailer_key")
+      .in("post_id", postIds);
+    if (items?.length) await removeItemStorage(supabase, items);
+  }
+  await supabase.functions.invoke("bunny-stream-delete", { body: { channel_id: id } });
+
   const { error, count } = await supabase.from("channels").delete({ count: "exact" }).eq("id", id);
   if (error || count === 0) {
     redirect(withMessage(`/channels/${id}`, "error", "Only the owner can delete channels."));
   }
   revalidatePath("/channels");
-  redirect(withMessage("/channels", "ok", "Channel deleted."));
+  redirect(withMessage("/channels", "ok", "Channel and all its content deleted."));
 }
 
 export async function addFolder(channelId: string, formData: FormData) {

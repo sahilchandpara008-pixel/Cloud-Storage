@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { withMessage } from "@/lib/format";
+import { removeItemStorage } from "@/lib/media-cleanup";
 
 const NO_PERMISSION = "You don't have permission to change this.";
 
@@ -57,11 +58,17 @@ export async function updatePost(id: string, formData: FormData) {
 
 export async function deletePost(id: string) {
   const { supabase } = await requireAdmin();
+  const { data: items } = await supabase
+    .from("post_items")
+    .select("media_key, thumb_key, trailer_key")
+    .eq("post_id", id);
+  if (items?.length) await removeItemStorage(supabase, items);
+  await supabase.functions.invoke("bunny-stream-delete", { body: { post_id: id } });
   const { error, count } = await supabase.from("posts").delete({ count: "exact" }).eq("id", id);
   if (error) redirect(withMessage(`/posts/${id}`, "error", friendly(error.message)));
   if (count === 0) redirect(withMessage(`/posts/${id}`, "error", NO_PERMISSION));
   revalidatePath("/posts");
-  redirect(withMessage("/posts", "ok", "Post deleted."));
+  redirect(withMessage("/posts", "ok", "Post and its media deleted."));
 }
 
 export async function setItemPremium(postId: string, itemId: string, premium: boolean) {
@@ -83,9 +90,8 @@ export async function deleteItem(postId: string, itemId: string) {
     .select("media_key, thumb_key, trailer_key")
     .eq("id", itemId)
     .maybeSingle();
-  if (item?.media_key) await supabase.storage.from("media").remove([item.media_key]);
-  if (item?.trailer_key) await supabase.storage.from("media").remove([item.trailer_key]);
-  if (item?.thumb_key) await supabase.storage.from("public").remove([item.thumb_key]);
+  if (item) await removeItemStorage(supabase, [item]);
+  await supabase.functions.invoke("bunny-stream-delete", { body: { item_id: itemId } });
   const { error, count } = await supabase.from("post_items").delete({ count: "exact" }).eq("id", itemId);
   if (error) redirect(withMessage(`/posts/${postId}`, "error", friendly(error.message)));
   if (count === 0) redirect(withMessage(`/posts/${postId}`, "error", NO_PERMISSION));

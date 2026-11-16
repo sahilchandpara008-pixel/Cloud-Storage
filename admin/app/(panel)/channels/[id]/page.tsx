@@ -98,7 +98,10 @@ export default async function ChannelPage({
       {role === "owner" && (
         <Card className="mt-6 border-red-200">
           <h2 className="font-semibold text-red-800">Delete channel</h2>
-          <p className="mb-3 text-sm text-gray-600">Deletes the channel with all its folders and posts.</p>
+          <p className="mb-3 text-sm text-gray-600">
+            Deletes the channel with all its folders and posts -- including every uploaded video, image, thumbnail
+            and trailer. This cannot be undone.
+          </p>
           <form action={deleteChannel.bind(null, id)}>
             <Button variant="danger" type="submit">Delete channel</Button>
           </form>
