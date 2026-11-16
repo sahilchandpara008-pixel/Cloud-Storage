@@ -509,8 +509,8 @@ class Backend {
       headers: {
         'Content-Type': 'application/octet-stream',
         'X-File-Name': Uri.encodeComponent(name),
-        if (parentId != null) 'X-Parent-Id': parentId,
-        if (mime != null) 'X-File-Mime': mime,
+        'X-Parent-Id': ?parentId,
+        'X-File-Mime': ?mime,
       },
     );
     if (res.status != 200) {
