@@ -101,7 +101,10 @@ class PostItem {
   final String id;
   final String kind; // video | image
   final bool isPremium;
-  final String mediaKey;
+
+  /// Null for a video that streams from Bunny instead of Supabase Storage
+  /// (see [isBunnyBacked]); always set otherwise.
+  final String? mediaKey;
   final String? thumbKey;
   final String? trailerKey;
   final int? durationS;
@@ -111,7 +114,7 @@ class PostItem {
     required this.id,
     required this.kind,
     required this.isPremium,
-    required this.mediaKey,
+    this.mediaKey,
     this.thumbKey,
     this.trailerKey,
     this.durationS,
@@ -120,13 +123,14 @@ class PostItem {
 
   bool get hasTrailer => trailerKey != null;
   bool get isVideo => kind == 'video';
+  bool get isBunnyBacked => mediaKey == null;
   String? get thumbUrl => thumbKey == null ? null : Config.publicUrl(thumbKey!);
 
   factory PostItem.fromJson(Map<String, dynamic> j) => PostItem(
     id: j['id'] as String,
     kind: j['kind'] as String,
     isPremium: (j['is_premium'] as bool?) ?? false,
-    mediaKey: j['media_key'] as String,
+    mediaKey: j['media_key'] as String?,
     thumbKey: j['thumb_key'] as String?,
     trailerKey: j['trailer_key'] as String?,
     durationS: (j['duration_s'] as num?)?.toInt(),

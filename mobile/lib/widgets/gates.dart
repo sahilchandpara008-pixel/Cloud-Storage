@@ -69,7 +69,15 @@ Future<void> watchItem(BuildContext context, Post post, PostItem item) async {
     await openPlans(context);
     return;
   }
-  await _play(context, post, item.mediaKey, item.isVideo, post.title);
+  await _play(
+    context,
+    post,
+    () => item.isBunnyBacked
+        ? Backend.bunnyStreamUrl(item.id)
+        : Backend.mediaUrl(item.mediaKey!),
+    item.isVideo,
+    post.title,
+  );
 }
 
 /// After a trailer: guests log in (no extra pop-up), then the normal gates
@@ -98,7 +106,7 @@ Future<void> watchTrailer(
   await _play(
     context,
     post,
-    item.trailerKey!,
+    () => Backend.mediaUrl(item.trailerKey!),
     true,
     'Trailer · ${post.title}',
     event: 'preview_view',
@@ -124,7 +132,7 @@ Future<void> openItem(BuildContext context, Post post, PostItem item) =>
 Future<void> _play(
   BuildContext context,
   Post post,
-  String key,
+  Future<String> Function() urlResolver,
   bool isVideo,
   String title, {
   String? event,
@@ -132,7 +140,7 @@ Future<void> _play(
   void Function(BuildContext)? onTrailerEnd,
 }) async {
   try {
-    final url = await Backend.mediaUrl(key);
+    final url = await urlResolver();
     Backend.logEvent(
       app.installId,
       event ?? (onWatchFull == null ? 'content_view' : 'preview_view'),
@@ -258,11 +266,15 @@ Future<void> downloadItem(
   Post post,
   PostItem item,
 ) async {
+  if (item.isBunnyBacked) {
+    showSnack(context, 'Downloads aren\'t available for this video yet.');
+    return;
+  }
   if (!await ensurePremiumForDownload(context) || !context.mounted) return;
   await _saveFrom(
     context,
-    () => Backend.mediaUrl(item.mediaKey),
-    Downloads.nameFor(post.title, item.mediaKey),
+    () => Backend.mediaUrl(item.mediaKey!),
+    Downloads.nameFor(post.title, item.mediaKey!),
     item.isVideo ? 'video/*' : 'image/*',
   );
 }

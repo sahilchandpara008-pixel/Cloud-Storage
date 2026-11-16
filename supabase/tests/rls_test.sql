@@ -963,6 +963,45 @@ select t.act_as('organic_user');
 select t.ok((public.my_status()->>'quota_bytes')::bigint = 2199023255552, 'premium users get 2 TB, not 15 GB');
 reset role;
 
+-- Bunny Stream videos: same visibility + premium rule as legacy media_key
+-- items, checked by item id so the raw video id is never read back to anyone
+-- who shouldn't have it.
+insert into t.ids values ('bunny_nonpremium_user', '90000000-0000-0000-0000-000000000001');
+insert into auth.users (id, email, is_anonymous) values
+  (t.id('bunny_nonpremium_user'), null, true);
+
+select t.fails($$insert into public.post_items (post_id, kind, is_premium, processing_status)
+                 values ('20000000-0000-0000-0000-000000000001', 'video', false, 'ready')$$,
+               'a post item needs either a media_key or a bunny_video_id');
+
+insert into public.post_items (id, post_id, kind, is_premium, bunny_video_id, processing_status) values
+  ('90000000-0000-0000-0000-000000000010', '20000000-0000-0000-0000-000000000001', 'video', true,
+   '90000000-0000-0000-0000-000000000011', 'ready'),
+  ('90000000-0000-0000-0000-000000000020', '20000000-0000-0000-0000-000000000001', 'video', false,
+   '90000000-0000-0000-0000-000000000021', 'ready'),
+  ('90000000-0000-0000-0000-000000000030', '20000000-0000-0000-0000-000000000006', 'video', false,
+   '90000000-0000-0000-0000-000000000031', 'ready');  -- on the hidden post
+
+set role authenticated;
+select t.act_as('owner');
+select t.ok(public.bunny_video_access('90000000-0000-0000-0000-000000000010'), 'admin can access any bunny video');
+select t.ok(public.bunny_video_path('90000000-0000-0000-0000-000000000010') = '90000000-0000-0000-0000-000000000011',
+             'admin gets the bunny video id back');
+
+select t.act_as('bunny_nonpremium_user');
+select t.ok(not public.bunny_video_access('90000000-0000-0000-0000-000000000010'),
+             'non-premium user cannot access a premium bunny video');
+select t.ok(public.bunny_video_access('90000000-0000-0000-0000-000000000020'),
+             'non-premium user can access a free bunny video');
+select t.fails($$select public.bunny_video_path('90000000-0000-0000-0000-000000000010')$$, 'Not allowed');
+select t.ok(not public.bunny_video_access('90000000-0000-0000-0000-000000000030'),
+             'a bunny video on a hidden post is not accessible');
+
+select t.act_as('organic_user');  -- granted 'gold' premium above
+select t.ok(public.bunny_video_access('90000000-0000-0000-0000-000000000010'),
+             'premium user can access a premium bunny video');
+reset role;
+
 -- Free mode: no plans; ads users (and approved organic users) get full access,
 -- organic users ask for it; everyone logged in gets 15 GB of cloud.
 delete from public.subscriptions;

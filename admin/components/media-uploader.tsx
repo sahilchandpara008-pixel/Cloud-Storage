@@ -1,10 +1,16 @@
 "use client";
 
+import { Upload as TusUpload } from "tus-js-client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { MAX_UPLOAD_BYTES, extension, formatBytes, readMedia } from "@/lib/media";
 import { createClient } from "@/lib/supabase/browser";
+
+// Videos go to Bunny Stream (seamless adaptive streaming); images still go to
+// Supabase Storage as before. Bunny has no practical size limit, so videos
+// skip the 50 MB check that still applies to images.
+const MAX_VIDEO_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB, generous ceiling
 
 type Row = { name: string; size: number; state: "waiting" | "uploading" | "done" | "error"; message?: string };
 
@@ -19,17 +25,46 @@ export function MediaUploader({ postId, nextPosition }: { postId: string; nextPo
     const picked = Array.from(list ?? []);
     setFiles(picked);
     setRows(
-      picked.map((f) => ({
-        name: f.name,
-        size: f.size,
-        state: f.size > MAX_UPLOAD_BYTES ? "error" : "waiting",
-        message: f.size > MAX_UPLOAD_BYTES ? "Larger than 50 MB (free plan limit)" : undefined,
-      })),
+      picked.map((f) => {
+        const isVideo = f.type.startsWith("video/");
+        const limit = isVideo ? MAX_VIDEO_BYTES : MAX_UPLOAD_BYTES;
+        return {
+          name: f.name,
+          size: f.size,
+          state: f.size > limit ? "error" : "waiting",
+          message: f.size > limit ? `Larger than ${isVideo ? "2 GB" : "50 MB (free plan limit)"}` : undefined,
+        };
+      }),
     );
   }
 
   function update(i: number, patch: Partial<Row>) {
     setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  }
+
+  // Uploads a video directly to Bunny Stream over TUS, with progress.
+  function uploadToBunny(
+    file: File,
+    auth: { videoId: string; libraryId: string; authorizationSignature: string; authorizationExpire: number },
+    onProgress: (pct: number) => void,
+  ) {
+    return new Promise<void>((resolve, reject) => {
+      const upload = new TusUpload(file, {
+        endpoint: "https://video.bunnycdn.com/tusupload",
+        retryDelays: [0, 1000, 3000, 5000],
+        headers: {
+          AuthorizationSignature: auth.authorizationSignature,
+          AuthorizationExpire: String(auth.authorizationExpire),
+          VideoId: auth.videoId,
+          LibraryId: auth.libraryId,
+        },
+        metadata: { filetype: file.type, title: file.name },
+        onError: reject,
+        onProgress: (sent, total) => onProgress(Math.round((sent / total) * 100)),
+        onSuccess: () => resolve(),
+      });
+      upload.start();
+    });
   }
 
   async function upload() {
@@ -39,38 +74,66 @@ export function MediaUploader({ postId, nextPosition }: { postId: string; nextPo
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (file.size > MAX_UPLOAD_BYTES) continue;
+      const isVideo = file.type.startsWith("video/");
+      const limit = isVideo ? MAX_VIDEO_BYTES : MAX_UPLOAD_BYTES;
+      if (file.size > limit) continue;
       update(i, { state: "uploading", message: "Reading file…" });
       try {
         const info = await readMedia(file);
         const id = crypto.randomUUID();
-        const mediaKey = `posts/${postId}/${id}.${extension(file)}`;
         const thumbKey = `thumbs/${postId}/${id}.jpg`;
 
-        update(i, { message: "Uploading…" });
-        const media = await supabase.storage
-          .from("media")
-          .upload(mediaKey, file, { contentType: file.type, upsert: false });
-        if (media.error) throw media.error;
-
+        update(i, { message: "Uploading thumbnail…" });
         const thumb = await supabase.storage
           .from("public")
           .upload(thumbKey, info.thumbnail, { contentType: "image/jpeg", upsert: false });
         if (thumb.error) throw thumb.error;
 
-        const { error } = await supabase.from("post_items").insert({
-          post_id: postId,
-          position: position++,
-          kind: info.kind,
-          is_premium: premium,
-          media_key: mediaKey,
-          thumb_key: thumbKey,
-          duration_s: info.durationS,
-          width: info.width,
-          height: info.height,
-          processing_status: "ready",
-        });
-        if (error) throw error;
+        if (isVideo) {
+          update(i, { message: "Starting video…" });
+          const { data: auth, error: createError } = await supabase.functions.invoke("bunny-stream-create", {
+            body: { title: file.name },
+          });
+          if (createError) throw createError;
+          if (auth?.error) throw new Error(auth.error);
+
+          await uploadToBunny(file, auth, (pct) => update(i, { message: `Uploading… ${pct}%` }));
+
+          const { error } = await supabase.from("post_items").insert({
+            post_id: postId,
+            position: position++,
+            kind: "video",
+            is_premium: premium,
+            bunny_video_id: auth.videoId,
+            thumb_key: thumbKey,
+            duration_s: info.durationS,
+            width: info.width,
+            height: info.height,
+            processing_status: "pending",
+          });
+          if (error) throw error;
+        } else {
+          const mediaKey = `posts/${postId}/${id}.${extension(file)}`;
+          update(i, { message: "Uploading…" });
+          const media = await supabase.storage
+            .from("media")
+            .upload(mediaKey, file, { contentType: file.type, upsert: false });
+          if (media.error) throw media.error;
+
+          const { error } = await supabase.from("post_items").insert({
+            post_id: postId,
+            position: position++,
+            kind: info.kind,
+            is_premium: premium,
+            media_key: mediaKey,
+            thumb_key: thumbKey,
+            duration_s: info.durationS,
+            width: info.width,
+            height: info.height,
+            processing_status: "ready",
+          });
+          if (error) throw error;
+        }
         update(i, { state: "done", message: undefined });
       } catch (e) {
         update(i, { state: "error", message: e instanceof Error ? e.message : "Upload failed" });
@@ -87,7 +150,9 @@ export function MediaUploader({ postId, nextPosition }: { postId: string; nextPo
     <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
       <label className="block cursor-pointer text-center text-sm text-gray-600">
         <span className="font-medium text-red-700">Choose videos or images</span>
-        <span className="block text-xs text-gray-500">MP4 videos and JPG/PNG images, up to 50 MB each</span>
+        <span className="block text-xs text-gray-500">
+          Videos stream from Bunny (up to 2 GB) · JPG/PNG images up to 50 MB
+        </span>
         <input
           type="file"
           multiple

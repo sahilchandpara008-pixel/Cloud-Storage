@@ -248,6 +248,19 @@ class Backend {
   static Future<String> mediaUrl(String key) =>
       sb.storage.from('media').createSignedUrl(key, 60 * 60);
 
+  /// Short-lived, adaptive-quality (HLS) playback link for a Bunny-backed
+  /// video item. The Edge Function enforces the same visibility/premium
+  /// rule as [mediaUrl] -- it refuses just like the storage signed URL would.
+  static Future<String> bunnyStreamUrl(String itemId) async {
+    final res = await sb.functions.invoke(
+      'bunny-stream-url',
+      body: {'item_id': itemId},
+    );
+    final url = (res.data as Map?)?['url'] as String?;
+    if (url == null) throw StateError('This video is not available right now.');
+    return url;
+  }
+
   // ---------------------------------------------------------------- creators
   static Future<String> uploadChannelIcon(
     Uint8List bytes,

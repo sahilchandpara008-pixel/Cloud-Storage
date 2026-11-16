@@ -1,0 +1,45 @@
+name: Supabase deploy
+
+on:
+  push:
+    paths: ["supabase/migrations/**", "supabase/functions/**", ".github/workflows/supabase-deploy.yml"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Apply database migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      - name: Deploy Edge Functions
+        run: supabase functions deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Set Bunny secrets for the Edge Functions
+        run: |
+          supabase secrets set \
+            BUNNY_STREAM_LIBRARY_ID="$BUNNY_STREAM_LIBRARY_ID" \
+            BUNNY_STREAM_API_KEY="$BUNNY_STREAM_API_KEY" \
+            BUNNY_STREAM_TOKEN_KEY="$BUNNY_STREAM_TOKEN_KEY" \
+            BUNNY_STREAM_HOST="$BUNNY_STREAM_HOST"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          BUNNY_STREAM_LIBRARY_ID: ${{ secrets.BUNNY_STREAM_LIBRARY_ID }}
+          BUNNY_STREAM_API_KEY: ${{ secrets.BUNNY_STREAM_API_KEY }}
+          BUNNY_STREAM_TOKEN_KEY: ${{ secrets.BUNNY_STREAM_TOKEN_KEY }}
+          BUNNY_STREAM_HOST: ${{ secrets.BUNNY_STREAM_HOST }}

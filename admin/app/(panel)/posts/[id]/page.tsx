@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CheckEncoding } from "@/components/check-encoding";
 import { MediaUploader } from "@/components/media-uploader";
 import { TrailerUpload } from "@/components/trailer-upload";
 import { PostForm, type PostValues } from "@/components/post-form";
@@ -105,6 +106,7 @@ export default async function PostPage({
                   {item.kind === "video" && (
                     <TrailerUpload postId={id} itemId={item.id} hasTrailer={!!item.trailer_key} />
                   )}
+                  {item.processing_status === "pending" && <CheckEncoding itemId={item.id} />}
                   <form action={deleteItem.bind(null, id, item.id)}>
                     <button className="text-xs text-gray-500 hover:text-red-700 hover:underline">Remove</button>
                   </form>
