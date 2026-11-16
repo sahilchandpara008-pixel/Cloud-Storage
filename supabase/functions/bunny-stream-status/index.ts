@@ -1,8 +1,11 @@
-// Admin-only: checks a Bunny Stream video's encoding status and, once it has
-// finished, marks the post_item ready and fills in its real duration/size.
-// Uses the service role (not RLS) because bunny_video_id is hidden from
-// every client by column grants -- even the admin panel's own browser
-// session can't read it directly.
+// Checks a Bunny Stream video's encoding status and, once it has finished,
+// marks the post_item ready and fills in its real duration/size. Callable by
+// admin or by the post's own creator (can_post_in() on its channel) -- the
+// same rule that already gates every other write to that channel's posts.
+// Reads/writes bunny_video_id with the service role (not RLS) because that
+// column is hidden from every client by column grants -- even the uploader's
+// own browser session can't read it directly -- but authorization is checked
+// first, via RLS, through the caller's own session.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const cors = {
@@ -29,9 +32,6 @@ Deno.serve(async (req) => {
   const { data: userData, error: userError } = await asUser.auth.getUser();
   if (userError || !userData.user) return json({ error: "not signed in" }, 401);
 
-  const { data: isAdmin } = await asUser.rpc("is_admin");
-  if (!isAdmin) return json({ error: "admin accounts only" }, 403);
-
   let itemId: string;
   try {
     const body = await req.json();
@@ -40,6 +40,11 @@ Deno.serve(async (req) => {
     return json({ error: "invalid request body" }, 400);
   }
   if (!itemId) return json({ error: "item_id is required" }, 400);
+
+  // Authorization: RLS only returns this row if the caller is admin or can
+  // post in the item's channel (items_manage policy) -- no row means no.
+  const { data: ownItem } = await asUser.from("post_items").select("id").eq("id", itemId).maybeSingle();
+  if (!ownItem) return json({ error: "not found, or you can't manage this item" }, 403);
 
   const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },

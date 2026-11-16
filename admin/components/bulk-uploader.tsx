@@ -129,7 +129,7 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
         if (r.isVideo) {
           update(i, { message: "Starting video…" });
           const { data: auth, error: createError } = await supabase.functions.invoke("bunny-stream-create", {
-            body: { title: r.file.name },
+            body: { title: r.file.name, channel_id: channelId },
           });
           if (createError) throw createError;
           if (auth?.error) throw new Error(auth.error);

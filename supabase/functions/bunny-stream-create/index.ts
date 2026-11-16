@@ -1,12 +1,15 @@
-// Admin-only: creates a Bunny Stream video entry and returns everything the
-// admin panel's browser needs to upload the file directly to Bunny over TUS,
-// without ever sending it the Bunny API key.
+// Creates a Bunny Stream video entry and returns everything the caller needs
+// to upload the file directly to Bunny over TUS, without ever sending it the
+// Bunny API key. Callable by admin (any channel) or by a creator posting into
+// their own approved channel -- the same can_post_in() rule that already
+// gates every other write to that channel's posts.
 //
-// Flow: admin panel calls this first, gets { videoId, authorizationSignature,
-// authorizationExpire, libraryId }, then uses a TUS client to upload straight
-// to https://video.bunnycdn.com/tusupload with those as headers. Once the
-// upload finishes, the admin panel inserts the post_items row itself
-// (bunny_video_id = videoId), same as it already does for Supabase uploads.
+// Flow: the caller provides channel_id, gets back { videoId,
+// authorizationSignature, authorizationExpire, libraryId }, then uses a TUS
+// client to upload straight to https://video.bunnycdn.com/tusupload with
+// those as headers. Once the upload finishes, the caller inserts the
+// post_items row itself (bunny_video_id = videoId), same as for Supabase
+// uploads.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const cors = {
@@ -41,16 +44,19 @@ Deno.serve(async (req) => {
   const { data: userData, error: userError } = await asUser.auth.getUser();
   if (userError || !userData.user) return json({ error: "not signed in" }, 401);
 
-  const { data: isAdmin } = await asUser.rpc("is_admin");
-  if (!isAdmin) return json({ error: "admin accounts only" }, 403);
-
   let title: string;
+  let channelId: string;
   try {
     const body = await req.json();
     title = String(body.title ?? "").trim().slice(0, 200) || "Untitled";
+    channelId = String(body.channel_id ?? "");
   } catch {
     return json({ error: "invalid request body" }, 400);
   }
+  if (!channelId) return json({ error: "channel_id is required" }, 400);
+
+  const { data: canPost } = await asUser.rpc("can_post_in", { p_channel_id: channelId });
+  if (!canPost) return json({ error: "you can't post in this channel" }, 403);
 
   const libraryId = Deno.env.get("BUNNY_STREAM_LIBRARY_ID")!;
   const apiKey = Deno.env.get("BUNNY_STREAM_API_KEY")!;

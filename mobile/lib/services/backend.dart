@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
+import 'package:cross_file/cross_file.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:tus_client_dart/tus_client_dart.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models.dart';
@@ -387,6 +389,113 @@ class Backend {
       'trailer_key': trailerKey,
       'processing_status': 'ready',
     });
+  }
+
+  /// Starts a Bunny Stream video for a channel the caller may post in (their
+  /// own approved channel, or any channel for admin) and returns the
+  /// short-lived, video-scoped upload credential.
+  static Future<Map<String, dynamic>> bunnyStreamCreate(
+    String channelId,
+    String title,
+  ) async {
+    final res = await sb.functions.invoke(
+      'bunny-stream-create',
+      body: {'title': title, 'channel_id': channelId},
+    );
+    final data = res.data as Map?;
+    if (data == null || data['error'] != null) {
+      throw StateError(
+        (data?['error'] as String?) ?? 'Could not start the video upload',
+      );
+    }
+    return Map<String, dynamic>.from(data);
+  }
+
+  /// Checks a Bunny-backed item's encoding status: 'ready' | 'processing' | 'failed'.
+  static Future<String> checkBunnyEncoding(String itemId) async {
+    final res = await sb.functions.invoke(
+      'bunny-stream-status',
+      body: {'item_id': itemId},
+    );
+    final data = res.data as Map?;
+    if (data == null || data['error'] != null) {
+      throw StateError((data?['error'] as String?) ?? 'Could not check encoding');
+    }
+    return data['status'] as String;
+  }
+
+  /// Posts a video straight to Bunny Stream -- no 50 MB cap, since the bytes
+  /// go from the phone to Bunny directly over TUS, never through our server.
+  /// Thumbnail and trailer (if any) still go to Supabase Storage, same as
+  /// [addPostItem]. The item starts 'pending'; the caller is expected to
+  /// follow up with [checkBunnyEncoding] until it's 'ready'.
+  static Future<String> addBunnyPostItem({
+    required String channelId,
+    required String postId,
+    required int position,
+    required String videoPath,
+    required String videoName,
+    required String videoMime,
+    Uint8List? thumbnail,
+    Uint8List? trailerBytes,
+    String? trailerExt,
+    String? trailerMime,
+    void Function(double percent)? onProgress,
+  }) async {
+    final auth = await bunnyStreamCreate(channelId, videoName);
+
+    final client = TusClient(XFile(videoPath), maxChunkSize: 10 * 1024 * 1024);
+    await client.upload(
+      uri: Uri.parse('https://video.bunnycdn.com/tusupload'),
+      headers: {
+        'AuthorizationSignature': auth['authorizationSignature'] as String,
+        'AuthorizationExpire': auth['authorizationExpire'].toString(),
+        'VideoId': auth['videoId'] as String,
+        'LibraryId': auth['libraryId'] as String,
+      },
+      metadata: {'filetype': videoMime, 'title': videoName},
+      onProgress: onProgress == null
+          ? null
+          : (percent, _) => onProgress(percent),
+    );
+
+    final id = _uuid.v4();
+    String? thumbKey;
+    if (thumbnail != null) {
+      thumbKey = 'thumbs/$postId/$id.jpg';
+      await sb.storage
+          .from('public')
+          .uploadBinary(
+            thumbKey,
+            thumbnail,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
+          );
+    }
+    String? trailerKey;
+    if (trailerBytes != null) {
+      trailerKey = 'posts/$postId/$id-trailer.${trailerExt ?? 'mp4'}';
+      await sb.storage
+          .from('media')
+          .uploadBinary(
+            trailerKey,
+            trailerBytes,
+            fileOptions: FileOptions(contentType: trailerMime ?? 'video/mp4'),
+          );
+    }
+    final row = await sb
+        .from('post_items')
+        .insert({
+          'post_id': postId,
+          'position': position,
+          'kind': 'video',
+          'bunny_video_id': auth['videoId'],
+          'thumb_key': thumbKey,
+          'trailer_key': trailerKey,
+          'processing_status': 'pending',
+        })
+        .select('id')
+        .single();
+    return row['id'] as String;
   }
 
   static Future<void> deletePost(String postId) async {

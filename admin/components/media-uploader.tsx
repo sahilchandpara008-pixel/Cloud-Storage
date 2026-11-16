@@ -14,7 +14,15 @@ const MAX_VIDEO_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB, generous ceiling
 
 type Row = { name: string; size: number; state: "waiting" | "uploading" | "done" | "error"; message?: string };
 
-export function MediaUploader({ postId, nextPosition }: { postId: string; nextPosition: number }) {
+export function MediaUploader({
+  postId,
+  channelId,
+  nextPosition,
+}: {
+  postId: string;
+  channelId: string;
+  nextPosition: number;
+}) {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
   const [rows, setRows] = useState<Row[]>([]);
@@ -92,7 +100,7 @@ export function MediaUploader({ postId, nextPosition }: { postId: string; nextPo
         if (isVideo) {
           update(i, { message: "Starting video…" });
           const { data: auth, error: createError } = await supabase.functions.invoke("bunny-stream-create", {
-            body: { title: file.name },
+            body: { title: file.name, channel_id: channelId },
           });
           if (createError) throw createError;
           if (auth?.error) throw new Error(auth.error);

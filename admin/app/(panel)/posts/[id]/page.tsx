@@ -114,7 +114,7 @@ export default async function PostPage({
               </li>
             ))}
           </ul>
-          <MediaUploader postId={id} nextPosition={items.length} />
+          <MediaUploader postId={id} channelId={post.channel_id} nextPosition={items.length} />
         </Card>
       </div>
 

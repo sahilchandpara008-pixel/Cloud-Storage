@@ -45,6 +45,10 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
   static const _videoExt = {'mp4', 'mov', 'm4v', 'webm', '3gp', 'mkv'};
 
+  // Videos go to Bunny Stream (seamless adaptive streaming, no practical size
+  // limit); only images stay on the 50 MB Supabase-plan cap.
+  static const _maxVideoBytes = 3 * 1024 * 1024 * 1024; // 3 GB
+
   @override
   void initState() {
     super.initState();
@@ -65,15 +69,13 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (res.isEmpty) return;
     var tooBig = 0;
     for (final f in res) {
+      final isVideo = _videoExt.contains((f.extension ?? '').toLowerCase());
       final size = await fileSize(f);
-      if (size > Config.maxUploadBytes) {
+      if (size > (isVideo ? _maxVideoBytes : Config.maxUploadBytes)) {
         tooBig++;
         continue;
       }
-      final picked = _Picked(
-        f,
-        _videoExt.contains((f.extension ?? '').toLowerCase()),
-      );
+      final picked = _Picked(f, isVideo);
       // Images double as their own thumbnail (public bucket allows up to 10 MB).
       picked.thumbnail = picked.isVideo
           ? await _videoThumb(f)
@@ -82,7 +84,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
     }
     setState(() {});
     if (tooBig > 0 && mounted) {
-      showSnack(context, '$tooBig file(s) skipped: larger than 50 MB.');
+      showSnack(context, '$tooBig file(s) skipped: too large.');
     }
   }
 
@@ -105,8 +107,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
   Future<void> _replaceMain(_Picked p) async {
     final f = await FilePicker.pickFile(type: FileType.video);
     if (f == null) return;
-    if (await fileSize(f) > Config.maxUploadBytes) {
-      if (mounted) showSnack(context, 'Video must be under 50 MB.');
+    if (await fileSize(f) > _maxVideoBytes) {
+      if (mounted) showSnack(context, 'Video must be under 3 GB.');
       return;
     }
     final thumb = p.customThumb ? p.thumbnail : await _videoThumb(f);
@@ -242,26 +244,80 @@ class _NewPostScreenState extends State<NewPostScreen> {
         _caption.text.trim().isEmpty ? null : _caption.text.trim(),
         folderId: _folderId,
       );
+      final pendingVideoIds = <String>[];
       for (var i = 0; i < _files.length; i++) {
-        setState(() => _progress = 'Uploading ${i + 1} of ${_files.length}…');
         final p = _files[i];
-        await Backend.addPostItem(
-          postId: postId,
-          position: i,
-          kind: p.isVideo ? 'video' : 'image',
-          bytes: await p.file.readAsBytes(),
-          ext: (p.file.extension ?? (p.isVideo ? 'mp4' : 'jpg')).toLowerCase(),
-          mime: _mime(p.file, p.isVideo),
-          thumbnail: p.thumbnail,
-          trailerBytes: p.trailer == null
-              ? null
-              : await p.trailer!.readAsBytes(),
-          trailerExt: p.trailer?.extension?.toLowerCase(),
-          trailerMime: p.trailer == null ? null : _mime(p.trailer!, true),
-        );
+        if (p.isVideo) {
+          final path = p.file.path;
+          if (path == null) {
+            throw StateError("Can't upload ${p.file.name}: no local file path.");
+          }
+          final itemId = await Backend.addBunnyPostItem(
+            channelId: widget.channelId,
+            postId: postId,
+            position: i,
+            videoPath: path,
+            videoName: p.file.name,
+            videoMime: _mime(p.file, true),
+            thumbnail: p.thumbnail,
+            trailerBytes: p.trailer == null
+                ? null
+                : await p.trailer!.readAsBytes(),
+            trailerExt: p.trailer?.extension?.toLowerCase(),
+            trailerMime: p.trailer == null ? null : _mime(p.trailer!, true),
+            onProgress: (pct) => setState(
+              () => _progress =
+                  'Uploading ${i + 1} of ${_files.length}… ${pct.round()}%',
+            ),
+          );
+          pendingVideoIds.add(itemId);
+        } else {
+          setState(() => _progress = 'Uploading ${i + 1} of ${_files.length}…');
+          await Backend.addPostItem(
+            postId: postId,
+            position: i,
+            kind: 'image',
+            bytes: await p.file.readAsBytes(),
+            ext: (p.file.extension ?? 'jpg').toLowerCase(),
+            mime: _mime(p.file, false),
+            thumbnail: p.thumbnail,
+          );
+        }
       }
       if (!mounted) return;
-      showSnack(context, 'Posted to ${widget.channelName}');
+
+      // Bunny encodes each video after upload; the post stays hidden from
+      // everyone (including the creator) until that's done. Poll briefly so
+      // a short video is already visible by the time this screen closes.
+      if (pendingVideoIds.isNotEmpty) {
+        setState(() => _progress = 'Processing video…');
+        final resolved = <String>{};
+        for (
+          var attempt = 0;
+          attempt < 6 && resolved.length < pendingVideoIds.length;
+          attempt++
+        ) {
+          await Future<void>.delayed(const Duration(seconds: 10));
+          for (final id in pendingVideoIds) {
+            if (resolved.contains(id)) continue;
+            try {
+              final status = await Backend.checkBunnyEncoding(id);
+              if (status != 'processing') resolved.add(id);
+            } catch (_) {
+              // keep retrying on the next pass
+            }
+          }
+        }
+        if (!mounted) return;
+        showSnack(
+          context,
+          resolved.length < pendingVideoIds.length
+              ? 'Posted to ${widget.channelName} — still processing, it\'ll appear once ready.'
+              : 'Posted to ${widget.channelName}',
+        );
+      } else {
+        showSnack(context, 'Posted to ${widget.channelName}');
+      }
       Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) showSnack(context, friendlyError(e));
@@ -441,7 +497,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
           const Text(
             'Each video: thumbnail (optional, auto-made if empty), main video '
             'and a short trailer. Ads users can watch the trailer for free; '
-            'the full video needs a plan. Files up to 50 MB.',
+            'the full video needs a plan. Videos up to 3 GB, images up to 50 MB.',
             style: TextStyle(
               color: AppColors.muted,
               fontSize: 12.5,
