@@ -21,10 +21,33 @@ class HomeShell extends StatefulWidget {
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
+  /// The app opens on Explore every time -- for ads and organic users alike.
+  /// A cold start already does (app.tab starts at Explore); this also covers
+  /// coming back from the background. Short trips away (file picker, UPI
+  /// payment app, share sheet) keep the current tab, so those flows aren't
+  /// interrupted. Screens open on top (player, payment status) stay open.
+  static const _exploreTab = 2;
+  static const _awayBeforeReset = Duration(minutes: 1);
+  DateTime? _backgroundedAt;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _backgroundedAt ??= DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      final away = _backgroundedAt;
+      _backgroundedAt = null;
+      if (away != null && DateTime.now().difference(away) >= _awayBeforeReset) {
+        app.tab.value = _exploreTab;
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _maybeAskConsent();
       await _resumePayment();
@@ -34,6 +57,7 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     app.passwordRecovery.removeListener(_onPasswordRecovery);
     super.dispose();
   }
