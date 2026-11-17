@@ -26,8 +26,20 @@ type Row = {
   view_count: number;
   channels: { name: string } | null;
   channel_folders: { name: string } | null;
-  post_items: { is_premium: boolean; thumb_key: string | null; position: number }[];
+  post_items: { is_premium: boolean; thumb_key: string | null; position: number; processing_status: string }[];
 };
+
+// Why a published post isn't live in the app yet (the database hides it).
+function hiddenReason(p: Row, now: number) {
+  if (p.status !== "published") return null;
+  if (p.post_items.some((i) => i.processing_status === "failed")) return { tone: "red" as const, text: "Video failed" };
+  if (p.post_items.some((i) => i.processing_status === "pending")) return { tone: "blue" as const, text: "Encoding…" };
+  if (p.published_at && new Date(p.published_at).getTime() > now) {
+    const hours = Math.max(1, Math.round((new Date(p.published_at).getTime() - now) / 3_600_000));
+    return { tone: "blue" as const, text: `Scheduled · in ${hours} h` };
+  }
+  return null;
+}
 
 export default async function PostsPage({
   searchParams,
@@ -41,7 +53,7 @@ export default async function PostsPage({
 
   let query = supabase
     .from("posts")
-    .select("id, title, audience, status, published_at, view_count, channels(name), channel_folders(name), post_items(is_premium, thumb_key, position)")
+    .select("id, title, audience, status, published_at, view_count, channels(name), channel_folders(name), post_items(is_premium, thumb_key, position, processing_status)")
     .order("created_at", { ascending: false })
     .limit(200);
   if (sp.channel) query = query.eq("channel_id", sp.channel);
@@ -108,7 +120,7 @@ export default async function PostsPage({
             {rows.map((p) => {
               const premium = p.post_items.filter((i) => i.is_premium).length;
               const thumb = [...p.post_items].sort((a, b) => a.position - b.position)[0]?.thumb_key;
-              const scheduled = p.status === "published" && p.published_at && new Date(p.published_at).getTime() > now;
+              const hidden = hiddenReason(p, now);
               return (
                 <tr key={p.id} className="hover:bg-gray-50">
                   <Td>
@@ -133,7 +145,7 @@ export default async function PostsPage({
                     {p.channel_folders && <span className="text-gray-500"> › {p.channel_folders.name}</span>}
                   </Td>
                   <Td><AudienceBadge audience={p.audience} /></Td>
-                  <Td>{scheduled ? <Badge tone="blue">Scheduled</Badge> : <StatusBadge status={p.status} />}</Td>
+                  <Td>{hidden ? <Badge tone={hidden.tone}>{hidden.text}</Badge> : <StatusBadge status={p.status} />}</Td>
                   <Td>
                     {p.post_items.length} {premium > 0 && <Badge tone="amber">👑 {premium}</Badge>}
                   </Td>

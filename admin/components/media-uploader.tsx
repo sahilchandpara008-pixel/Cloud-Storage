@@ -4,7 +4,7 @@ import { Upload as TusUpload } from "tus-js-client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
-import { MAX_UPLOAD_BYTES, extension, formatBytes, readMedia } from "@/lib/media";
+import { MAX_UPLOAD_BYTES, extension, formatBytes, readMedia, type MediaInfo } from "@/lib/media";
 import { createClient } from "@/lib/supabase/browser";
 
 // Videos go to Bunny Stream (seamless adaptive streaming); images still go to
@@ -87,15 +87,24 @@ export function MediaUploader({
       if (file.size > limit) continue;
       update(i, { state: "uploading", message: "Reading file…" });
       try {
-        const info = await readMedia(file);
+        // If the browser can't decode a video, carry on: Bunny takes its own
+        // thumbnail and measures the video once it has encoded it.
+        let info: MediaInfo | null = null;
+        try {
+          info = await readMedia(file);
+        } catch (e) {
+          if (!isVideo) throw e;
+        }
         const id = crypto.randomUUID();
-        const thumbKey = `thumbs/${postId}/${id}.jpg`;
-
-        update(i, { message: "Uploading thumbnail…" });
-        const thumb = await supabase.storage
-          .from("public")
-          .upload(thumbKey, info.thumbnail, { contentType: "image/jpeg", upsert: false });
-        if (thumb.error) throw thumb.error;
+        let thumbKey: string | null = null;
+        if (info) {
+          thumbKey = `thumbs/${postId}/${id}.jpg`;
+          update(i, { message: "Uploading thumbnail…" });
+          const thumb = await supabase.storage
+            .from("public")
+            .upload(thumbKey, info.thumbnail, { contentType: "image/jpeg", upsert: false });
+          if (thumb.error) throw thumb.error;
+        }
 
         if (isVideo) {
           update(i, { message: "Starting video…" });
@@ -114,9 +123,9 @@ export function MediaUploader({
             is_premium: premium,
             bunny_video_id: auth.videoId,
             thumb_key: thumbKey,
-            duration_s: info.durationS,
-            width: info.width,
-            height: info.height,
+            duration_s: info?.durationS ?? null,
+            width: info?.width ?? null,
+            height: info?.height ?? null,
             processing_status: "pending",
           });
           if (error) throw error;
@@ -131,13 +140,13 @@ export function MediaUploader({
           const { error } = await supabase.from("post_items").insert({
             post_id: postId,
             position: position++,
-            kind: info.kind,
+            kind: info!.kind,
             is_premium: premium,
             media_key: mediaKey,
             thumb_key: thumbKey,
-            duration_s: info.durationS,
-            width: info.width,
-            height: info.height,
+            duration_s: info!.durationS,
+            width: info!.width,
+            height: info!.height,
             processing_status: "ready",
           });
           if (error) throw error;

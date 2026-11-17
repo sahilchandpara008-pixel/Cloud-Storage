@@ -416,3 +416,6 @@ enabled = true
 
 [functions.play-report]
 verify_jwt = false
+
+[functions.bunny-stream-sync]
+verify_jwt = false

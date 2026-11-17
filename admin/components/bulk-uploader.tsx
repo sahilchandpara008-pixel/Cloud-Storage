@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Button, Field, Select } from "@/components/ui";
 import { AUDIENCES } from "@/lib/format";
-import { MAX_UPLOAD_BYTES, extension, formatBytes, readMedia } from "@/lib/media";
+import { MAX_UPLOAD_BYTES, extension, formatBytes, readMedia, type MediaInfo } from "@/lib/media";
 import { createClient } from "@/lib/supabase/browser";
 import type { ChannelOption } from "./post-form";
 
@@ -90,7 +90,6 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
       setBusy(false);
       return;
     }
-    const publishedAt = publishNow ? new Date().toISOString() : null;
     const pendingItemIds: string[] = [];
 
     for (let i = 0; i < rows.length; i++) {
@@ -101,8 +100,19 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
         continue;
       }
       update(i, { state: "uploading", message: "Reading file…" });
+      let createdPostId: string | null = null;
       try {
-        const info = await readMedia(r.file);
+        // A browser can't always decode a video (MKV, HEVC, ...). That must not
+        // block the upload: Bunny takes its own thumbnail and measures the
+        // video once it has encoded it (see the bunny-stream-sync function).
+        let info: MediaInfo | null = null;
+        try {
+          info = await readMedia(r.file);
+        } catch (e) {
+          if (!r.isVideo) throw e;
+        }
+        // No published_at on purpose: "publish now" is stamped by the database
+        // clock (this computer's clock may be wrong, which once hid a video).
         const { data: post, error: postError } = await supabase
           .from("posts")
           .insert({
@@ -111,20 +121,23 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
             title: r.title.trim() || r.file.name,
             audience: effectiveAudience,
             status: publishNow ? "published" : "draft",
-            published_at: publishedAt,
             created_by: uid,
           })
           .select("id")
           .single();
         if (postError) throw postError;
+        createdPostId = post.id as string;
 
         const id = crypto.randomUUID();
-        const thumbKey = `thumbs/${post.id}/${id}.jpg`;
-        update(i, { message: "Uploading thumbnail…" });
-        const thumb = await supabase.storage
-          .from("public")
-          .upload(thumbKey, info.thumbnail, { contentType: "image/jpeg", upsert: false });
-        if (thumb.error) throw thumb.error;
+        let thumbKey: string | null = null;
+        if (info) {
+          thumbKey = `thumbs/${post.id}/${id}.jpg`;
+          update(i, { message: "Uploading thumbnail…" });
+          const thumb = await supabase.storage
+            .from("public")
+            .upload(thumbKey, info.thumbnail, { contentType: "image/jpeg", upsert: false });
+          if (thumb.error) throw thumb.error;
+        }
 
         if (r.isVideo) {
           update(i, { message: "Starting video…" });
@@ -145,9 +158,9 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
               is_premium: premium,
               bunny_video_id: auth.videoId,
               thumb_key: thumbKey,
-              duration_s: info.durationS,
-              width: info.width,
-              height: info.height,
+              duration_s: info?.durationS ?? null,
+              width: info?.width ?? null,
+              height: info?.height ?? null,
               processing_status: "pending",
             })
             .select("id")
@@ -166,19 +179,21 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
           const { error } = await supabase.from("post_items").insert({
             post_id: post.id,
             position: 0,
-            kind: info.kind,
+            kind: info!.kind,
             is_premium: premium,
             media_key: mediaKey,
             thumb_key: thumbKey,
-            duration_s: info.durationS,
-            width: info.width,
-            height: info.height,
+            duration_s: info!.durationS,
+            width: info!.width,
+            height: info!.height,
             processing_status: "ready",
           });
           if (error) throw error;
           update(i, { state: "done", message: undefined });
         }
       } catch (e) {
+        // Don't leave an empty post behind: it would show in the app with no media.
+        if (createdPostId) await supabase.from("posts").delete().eq("id", createdPostId);
         update(i, { state: "error", message: e instanceof Error ? e.message : "Upload failed" });
       }
     }

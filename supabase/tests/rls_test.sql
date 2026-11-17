@@ -1031,6 +1031,49 @@ select t.ok(public.bunny_video_access('90000000-0000-0000-0000-000000000010'),
              'premium user can access a premium bunny video');
 reset role;
 
+-- A freshly uploaded video must not stay invisible: the database clock (not the
+-- uploader's computer clock) decides "publish now", and a post goes live as
+-- soon as Bunny has finished encoding its video.
+insert into public.posts (id, channel_id, title, audience, status)
+select '91000000-0000-0000-0000-000000000001', channel_id, 'bulk upload', 'all', 'published'
+  from public.posts where id = '20000000-0000-0000-0000-000000000001';
+select t.ok((select published_at from public.posts where id = '91000000-0000-0000-0000-000000000001')
+              between now() - interval '1 minute' and now() + interval '1 minute',
+            'a published post with no time goes live now, by the database clock');
+insert into public.post_items (id, post_id, kind, is_premium, bunny_video_id, processing_status) values
+  ('91000000-0000-0000-0000-000000000010', '91000000-0000-0000-0000-000000000001', 'video', false,
+   '91000000-0000-0000-0000-000000000011', 'pending');
+
+set role authenticated;
+select t.act_as('bunny_nonpremium_user');
+select t.ok(not public.post_visible('91000000-0000-0000-0000-000000000001'),
+            'a post whose video is still encoding is hidden from users');
+select t.act_as('owner');
+select t.ok(public.post_visible('91000000-0000-0000-0000-000000000001'),
+            'an admin still sees a post whose video is encoding');
+reset role;
+
+update public.post_items set processing_status = 'ready' where id = '91000000-0000-0000-0000-000000000010';
+set role authenticated;
+select t.act_as('bunny_nonpremium_user');
+select t.ok(public.post_visible('91000000-0000-0000-0000-000000000001'),
+            'once Bunny finishes encoding, the post is visible to everyone allowed');
+reset role;
+
+insert into public.posts (id, channel_id, title, audience, status, published_at)
+select '91000000-0000-0000-0000-000000000002', channel_id, 'scheduled', 'all', 'published', now() + interval '8 hours'
+  from public.posts where id = '20000000-0000-0000-0000-000000000001';
+insert into public.post_items (post_id, kind, is_premium, bunny_video_id, processing_status)
+values ('91000000-0000-0000-0000-000000000002', 'video', false, '91000000-0000-0000-0000-000000000021', 'ready');
+set role authenticated;
+select t.act_as('bunny_nonpremium_user');
+select t.ok(not public.post_visible('91000000-0000-0000-0000-000000000002'),
+            'a post scheduled for later stays hidden until its time');
+reset role;
+
+select public.bunny_sync_tick();  -- must be a safe no-op when nothing is configured
+select t.ok(true, 'bunny_sync_tick is safe when no function URL / pg_net is configured');
+
 -- Free mode: no plans; ads users (and approved organic users) get full access,
 -- organic users ask for it; everyone logged in gets 15 GB of cloud.
 delete from public.subscriptions;
