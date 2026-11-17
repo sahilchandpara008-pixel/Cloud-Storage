@@ -66,7 +66,12 @@ export async function deletePost(id: string) {
   await supabase.functions.invoke("bunny-stream-delete", { body: { post_id: id } });
   const { error, count } = await supabase.from("posts").delete({ count: "exact" }).eq("id", id);
   if (error) redirect(withMessage(`/posts/${id}`, "error", friendly(error.message)));
-  if (count === 0) redirect(withMessage(`/posts/${id}`, "error", NO_PERMISSION));
+  if (count === 0) {
+    // Already deleted (a second click or a retry) is a success; only a post
+    // that is still there means this admin lacks permission.
+    const { data: stillThere } = await supabase.from("posts").select("id").eq("id", id).maybeSingle();
+    if (stillThere) redirect(withMessage(`/posts/${id}`, "error", NO_PERMISSION));
+  }
   revalidatePath("/posts");
   redirect(withMessage("/posts", "ok", "Post and its media deleted."));
 }

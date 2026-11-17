@@ -55,7 +55,9 @@ export async function updateChannel(id: string, formData: FormData) {
 }
 
 export async function deleteChannel(id: string) {
-  const { supabase } = await requireAdmin();
+  // Owner only, checked BEFORE anything is removed: the clean-up below is
+  // permanent, so it must never run for someone the database would then refuse.
+  const { supabase } = await requireOwner();
 
   // Clean up every post's media and Bunny video before the cascade delete
   // removes the rows (and their keys) for good.
@@ -71,8 +73,14 @@ export async function deleteChannel(id: string) {
   await supabase.functions.invoke("bunny-stream-delete", { body: { channel_id: id } });
 
   const { error, count } = await supabase.from("channels").delete({ count: "exact" }).eq("id", id);
-  if (error || count === 0) {
-    redirect(withMessage(`/channels/${id}`, "error", "Only the owner can delete channels."));
+  if (error) redirect(withMessage(`/channels/${id}`, "error", friendly(error.message)));
+  if (count === 0) {
+    // Nothing matched. Either the channel is already gone -- a second click or
+    // a retry while the first delete was still running -- which is a success,
+    // and sending the admin back to its (now missing) page would be a 404; or
+    // the database refused the delete.
+    const { data: stillThere } = await supabase.from("channels").select("id").eq("id", id).maybeSingle();
+    if (stillThere) redirect(withMessage(`/channels/${id}`, "error", "Only the owner can delete channels."));
   }
   revalidatePath("/channels");
   redirect(withMessage("/channels", "ok", "Channel and all its content deleted."));

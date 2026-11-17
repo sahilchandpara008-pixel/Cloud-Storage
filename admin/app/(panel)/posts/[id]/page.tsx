@@ -1,10 +1,12 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { CheckEncoding } from "@/components/check-encoding";
+import { DeleteButton } from "@/components/delete-button";
 import { MediaUploader } from "@/components/media-uploader";
 import { TrailerUpload } from "@/components/trailer-upload";
 import { PostForm, type PostValues } from "@/components/post-form";
-import { Badge, Button, Card, Flash, PageHeader } from "@/components/ui";
+import { Badge, Card, Flash, PageHeader } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
+import { withMessage } from "@/lib/format";
 import { loadChannelOptions } from "@/lib/channels";
 import { publicUrl } from "@/lib/supabase/browser";
 import { deleteItem, deletePost, setItemPremium, updatePost } from "../actions";
@@ -37,7 +39,7 @@ export default async function PostPage({
     .select("id, channel_id, folder_id, title, caption, audience, status, published_at, view_count")
     .eq("id", id)
     .maybeSingle();
-  if (!post) notFound();
+  if (!post) redirect(withMessage("/posts", "error", "That post no longer exists. It may have been deleted."));
 
   const [channels, { data: itemRows }] = await Promise.all([
     loadChannelOptions(supabase),
@@ -135,7 +137,11 @@ export default async function PostPage({
         <h2 className="font-semibold text-red-800">Delete post</h2>
         <p className="mb-3 text-sm text-gray-600">Removes the post and its media from the app.</p>
         <form action={deletePost.bind(null, id)}>
-          <Button variant="danger" type="submit">Delete post</Button>
+          <DeleteButton
+            label="Delete post"
+            pendingLabel="Deleting… please wait"
+            confirmText={`Delete "${post.title}" and permanently remove its videos and images? This cannot be undone.`}
+          />
         </form>
       </Card>
     </>

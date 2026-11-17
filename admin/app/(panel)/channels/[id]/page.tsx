@@ -1,8 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { ChannelForm, type ChannelValues } from "@/components/channel-form";
+import { DeleteButton } from "@/components/delete-button";
 import { Button, Card, Flash, Input, LinkButton, PageHeader } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
+import { withMessage } from "@/lib/format";
 import { addFolder, deleteChannel, deleteFolder, updateChannel, updateFolder } from "../actions";
 
 type Folder = { id: string; name: string; position: number; posts: { count: number }[] };
@@ -23,7 +25,9 @@ export default async function ChannelPage({
     .select("id, name, handle, description, category, icon_url, audience, status, members_count")
     .eq("id", id)
     .maybeSingle();
-  if (!channel) notFound();
+  // A deleted channel's link (old tab, bookmark, a late redirect) lands on the
+  // list with a note instead of a bare 404.
+  if (!channel) redirect(withMessage("/channels", "error", "That channel no longer exists. It may have been deleted."));
 
   const { data: folderRows } = await supabase
     .from("channel_folders")
@@ -103,7 +107,11 @@ export default async function ChannelPage({
             and trailer. This cannot be undone.
           </p>
           <form action={deleteChannel.bind(null, id)}>
-            <Button variant="danger" type="submit">Delete channel</Button>
+            <DeleteButton
+              label="Delete channel"
+              pendingLabel="Deleting… please wait"
+              confirmText={`Delete "${channel.name}" and permanently remove every video, image, thumbnail and preview in it? This cannot be undone.`}
+            />
           </form>
         </Card>
       )}
