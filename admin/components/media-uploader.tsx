@@ -136,10 +136,10 @@ export function MediaUploader({
   return (
     <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
       <label className="block cursor-pointer text-center text-sm text-gray-600">
-        <span className="font-medium text-red-700">Add main content: choose videos or images</span>
+        <span className="font-medium text-red-700">+ Add more videos or images to this post</span>
         <span className="block text-xs text-gray-500">
           Videos stream from Bunny (up to 2 GB) · JPG/PNG images up to 50 MB. The thumbnail is taken from the video;
-          change it or add a preview from the item&apos;s links above.
+          use the buttons on each item to change it or add a preview.
         </span>
         <input
           type="file"
@@ -165,7 +165,7 @@ export function MediaUploader({
                     r.state === "done" ? "text-green-700" : r.state === "error" ? "text-red-700" : "text-gray-500"
                   }`}
                 >
-                  {r.state === "done" ? "Uploaded" : r.message ?? (r.state === "waiting" ? "Ready" : "")}
+                  {r.state === "done" ? "✓ Uploaded" : r.message ?? (r.state === "waiting" ? "Ready" : "")}
                 </span>
               </li>
             ))}

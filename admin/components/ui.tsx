@@ -111,6 +111,10 @@ export function Select({ className = "", ...props }: ComponentProps<"select">) {
   return <select className={`${inputClass} ${className}`} {...props} />;
 }
 
+// Small secondary action used on media cards (labels, buttons, links).
+export const smallAction =
+  "inline-flex cursor-pointer items-center gap-1 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50";
+
 const badgeTones = {
   gray: "bg-gray-100 text-gray-700",
   red: "bg-red-100 text-red-800",

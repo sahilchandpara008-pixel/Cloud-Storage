@@ -5,6 +5,7 @@ import { useState } from "react";
 import { MAX_VIDEO_BYTES, uploadVideoToBunny } from "@/lib/bunny-upload";
 import { formatBytes } from "@/lib/media";
 import { createClient } from "@/lib/supabase/browser";
+import { smallAction } from "./ui";
 
 // Add or replace the preview (trailer) of a video item -- played by ads users
 // before they buy. It is a second Bunny Stream video, so it streams as
@@ -55,8 +56,8 @@ export function TrailerUpload({
   }
 
   return (
-    <label className="cursor-pointer text-xs font-medium text-red-700 hover:underline">
-      {status ?? (hasTrailer ? "Replace preview" : "Add preview")}
+    <label className={smallAction}>
+      🎬 {status ?? (hasTrailer ? "Replace preview" : "Add preview")}
       <input type="file" accept="video/*" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} />
     </label>
   );

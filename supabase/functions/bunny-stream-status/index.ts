@@ -84,5 +84,7 @@ Deno.serve(async (req) => {
     await admin.from("post_items").update({ processing_status: "failed" }).eq("id", itemId);
     return json({ status: "failed" });
   }
-  return json({ status: "processing" });
+  // encodeProgress: Bunny's own 0-100 encoding progress, shown in the admin.
+  const progress = Number.isFinite(video.encodeProgress) ? Math.max(0, Math.min(100, Math.round(video.encodeProgress))) : null;
+  return json({ status: "processing", progress, bunny_status: video.status });
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui";
@@ -123,6 +124,7 @@ export function ContentUploader({
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<string | null>(null);
 
   // Single mode: the preview / thumbnail / title / caption can be filled in
   // before the main file is chosen; they move into the row once it is.
@@ -239,6 +241,7 @@ export function ContentUploader({
 
   async function run() {
     setFormError(null);
+    setSummary(null);
     // "Publish at" is a time the admin typed, not this computer's clock.
     let scheduledAt: string | null = null;
     if (publishMode === "schedule") {
@@ -384,8 +387,19 @@ export function ContentUploader({
     // encoding progress and lets the admin adjust anything).
     if (rows.length === 1 && okPostIds.length === 1) {
       setBusy(false);
-      router.push(`/posts/${okPostIds[0]}`);
+      const msg = rows[0].isVideo
+        ? "✅ Video uploaded successfully. Bunny is processing it now; it appears in the app by itself when that finishes."
+        : "✅ Uploaded successfully.";
+      router.push(`/posts/${okPostIds[0]}?ok=${encodeURIComponent(msg)}`);
       return;
+    }
+    if (okPostIds.length > 0) {
+      setSummary(
+        `✅ ${okPostIds.length} of ${rows.length} uploaded successfully.` +
+          (pendingItemIds.length > 0
+            ? " Videos appear in the app by themselves once Bunny has processed them."
+            : ""),
+      );
     }
 
     // Several items: videos stay hidden from users until Bunny finishes
@@ -679,6 +693,14 @@ export function ContentUploader({
               <Button type="button" onClick={run} disabled={busy || waiting === 0} className="mt-3 w-full">
                 {uploadLabel}
               </Button>
+              {summary && (
+                <p role="status" className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800 ring-1 ring-green-200">
+                  {summary}{" "}
+                  <Link href="/posts" className="font-medium underline">
+                    See all posts
+                  </Link>
+                </p>
+              )}
             </>
           )}
         </div>

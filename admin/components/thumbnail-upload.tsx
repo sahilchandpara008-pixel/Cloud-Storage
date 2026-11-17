@@ -5,6 +5,7 @@ import { useState } from "react";
 import { MAX_THUMBNAIL_BYTES } from "@/lib/bunny-upload";
 import { toJpegThumbnail } from "@/lib/media";
 import { createClient } from "@/lib/supabase/browser";
+import { smallAction } from "./ui";
 
 // Add or replace the thumbnail (cover picture) of a video item.
 export function ThumbnailUpload({
@@ -48,8 +49,8 @@ export function ThumbnailUpload({
   }
 
   return (
-    <label className="cursor-pointer text-xs font-medium text-red-700 hover:underline">
-      {status ?? (currentKey ? "Change thumbnail" : "Add thumbnail")}
+    <label className={smallAction}>
+      🖼 {status ?? (currentKey ? "Change thumbnail" : "Add thumbnail")}
       <input type="file" accept="image/*" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} />
     </label>
   );
