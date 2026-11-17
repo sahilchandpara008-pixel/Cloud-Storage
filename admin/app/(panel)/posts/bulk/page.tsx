@@ -11,7 +11,7 @@ export default async function BulkUploadPage() {
     <>
       <PageHeader
         title="Bulk upload"
-        subtitle="Upload many videos or images into one channel at once. Each file becomes its own post, saved on Bunny exactly like a single upload -- same audience, premium and approval rules."
+        subtitle="Upload many videos or images into a channel at once. Each file becomes its own post, with its own optional preview and thumbnail. Videos and previews are saved on Bunny, with the same audience, premium and approval rules as any post."
       />
       <Card>
         {channels.length === 0 ? (

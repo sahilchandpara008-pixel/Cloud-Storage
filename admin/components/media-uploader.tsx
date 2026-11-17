@@ -136,9 +136,10 @@ export function MediaUploader({
   return (
     <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
       <label className="block cursor-pointer text-center text-sm text-gray-600">
-        <span className="font-medium text-red-700">Choose videos or images</span>
+        <span className="font-medium text-red-700">Add main content: choose videos or images</span>
         <span className="block text-xs text-gray-500">
-          Videos stream from Bunny (up to 2 GB) · JPG/PNG images up to 50 MB
+          Videos stream from Bunny (up to 2 GB) · JPG/PNG images up to 50 MB. The thumbnail is taken from the video;
+          change it or add a preview from the item&apos;s links above.
         </span>
         <input
           type="file"

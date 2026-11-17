@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { CheckEncoding } from "@/components/check-encoding";
 import { DeleteButton } from "@/components/delete-button";
 import { MediaUploader } from "@/components/media-uploader";
+import { ThumbnailUpload } from "@/components/thumbnail-upload";
 import { TrailerUpload } from "@/components/trailer-upload";
 import { PostForm, type PostValues } from "@/components/post-form";
 import { Badge, Card, Flash, PageHeader } from "@/components/ui";
@@ -114,6 +115,9 @@ export default async function PostPage({
                       {item.is_premium ? "Make free" : "Make premium"}
                     </button>
                   </form>
+                  {item.kind === "video" && (
+                    <ThumbnailUpload postId={id} itemId={item.id} currentKey={item.thumb_key} />
+                  )}
                   {item.kind === "video" && (
                     <TrailerUpload
                       channelId={post.channel_id}

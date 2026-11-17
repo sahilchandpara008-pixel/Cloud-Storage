@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { Button, Field, Input, Select } from "@/components/ui";
+import { Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { MAX_THUMBNAIL_BYTES, MAX_VIDEO_BYTES, uploadVideoToBunny } from "@/lib/bunny-upload";
 import { AUDIENCES } from "@/lib/format";
 import {
@@ -17,30 +17,104 @@ import { createClient } from "@/lib/supabase/browser";
 import type { ChannelOption } from "./post-form";
 
 type Row = {
-  file: File;
+  file: File; // the main content
   isVideo: boolean;
   title: string;
+  caption: string;
   thumb?: File; // optional hand-picked cover (otherwise taken from the video)
   preview?: File; // optional preview clip (played by ads users before they buy)
   state: "waiting" | "uploading" | "encoding" | "done" | "error";
   message?: string;
 };
 
-// Lets the admin drop many videos/images into any channel at once (their own
-// or one created by a user): each file becomes its own post. Videos -- and
-// their optional previews -- are stored on Bunny Stream and streamed from
-// there; images go to Supabase Storage. Visibility (audience, premium) follows
-// the same rules as every other post -- nothing here bypasses
+type PublishMode = "now" | "schedule" | "draft";
+
+// One box in a file's row: shows what's chosen, or a clear button to choose it.
+function Slot({
+  title,
+  optional,
+  hint,
+  accept,
+  file,
+  disabled,
+  onPick,
+  onClear,
+}: {
+  title: string;
+  optional?: boolean;
+  hint: string;
+  accept?: string;
+  file?: File;
+  disabled?: boolean;
+  onPick?: (file: File | undefined) => void;
+  onClear?: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-xs">
+      <p className="font-medium text-gray-800">
+        {title}
+        {optional && <span className="font-normal text-gray-400"> · optional</span>}
+      </p>
+      {file ? (
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate text-gray-700">
+            ✓ {file.name} · {formatBytes(file.size)}
+          </span>
+          {onClear && !disabled && (
+            <button type="button" onClick={onClear} className="shrink-0 text-gray-500 hover:text-red-700 hover:underline">
+              Remove
+            </button>
+          )}
+        </div>
+      ) : (
+        <label
+          className={`mt-1 inline-block rounded-md border border-gray-300 bg-white px-2.5 py-1 font-medium text-red-700 ${
+            disabled ? "opacity-50" : "cursor-pointer hover:bg-gray-100"
+          }`}
+        >
+          Choose file
+          <input
+            type="file"
+            accept={accept}
+            className="sr-only"
+            disabled={disabled}
+            onChange={(e) => {
+              onPick?.(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      )}
+      <p className="mt-1 text-gray-500">{hint}</p>
+    </div>
+  );
+}
+
+// Upload content into any channel (the admin's own or one created by a user):
+// each main file becomes its own post, with an optional preview clip and an
+// optional thumbnail. Videos and previews are stored on Bunny Stream and
+// streamed from there; images go to Supabase Storage. Visibility (audience,
+// premium) follows the same rules as every other post -- nothing here bypasses
 // post_visible() or the premium gate.
-export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
+export function BulkUploader({
+  channels,
+  initialChannelId,
+}: {
+  channels: ChannelOption[];
+  initialChannelId?: string;
+}) {
   const router = useRouter();
-  const [channelId, setChannelId] = useState(channels[0]?.id ?? "");
+  const [channelId, setChannelId] = useState(
+    channels.some((c) => c.id === initialChannelId) ? (initialChannelId as string) : (channels[0]?.id ?? ""),
+  );
   const [folderId, setFolderId] = useState("");
   const [audience, setAudience] = useState("all");
   const [premium, setPremium] = useState(true);
-  const [publishNow, setPublishNow] = useState(true);
+  const [publishMode, setPublishMode] = useState<PublishMode>("now");
+  const [publishLocal, setPublishLocal] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const channel = useMemo(() => channels.find((c) => c.id === channelId), [channels, channelId]);
   const lockedAudience = channel && channel.audience !== "all" ? channel.audience : null;
@@ -52,6 +126,7 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
       file: f,
       isVideo: f.type.startsWith("video/"),
       title: f.name.replace(/\.[^.]+$/, ""),
+      caption: "",
       state: "waiting",
     }));
     setRows((prev) => [...prev, ...picked]);
@@ -80,6 +155,18 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
   }
 
   async function run() {
+    setFormError(null);
+    // "Publish at" is a time the admin typed, not this computer's clock.
+    let scheduledAt: string | null = null;
+    if (publishMode === "schedule") {
+      const when = publishLocal ? new Date(publishLocal) : null;
+      if (!when || Number.isNaN(when.getTime())) {
+        setFormError("Pick the date and time to publish at.");
+        return;
+      }
+      scheduledAt = when.toISOString();
+    }
+
     setBusy(true);
     const supabase = createClient();
     const { data: userData } = await supabase.auth.getUser();
@@ -89,6 +176,7 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
       return;
     }
     const pendingItemIds: string[] = [];
+    const okPostIds: string[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
@@ -110,16 +198,18 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
         } catch (e) {
           if (!r.isVideo) throw e;
         }
-        // No published_at on purpose: "publish now" is stamped by the database
-        // clock (this computer's clock may be wrong, which once hid a video).
+        // "Publish now" sends no published_at: the database clock stamps it
+        // (this computer's clock may be wrong, which once hid a video).
         const { data: post, error: postError } = await supabase
           .from("posts")
           .insert({
             channel_id: channelId,
             folder_id: folderId || null,
             title: r.title.trim() || r.file.name,
+            caption: r.caption.trim() || null,
             audience: effectiveAudience,
-            status: publishNow ? "published" : "draft",
+            status: publishMode === "draft" ? "draft" : "published",
+            ...(scheduledAt ? { published_at: scheduledAt } : {}),
             created_by: uid,
           })
           .select("id")
@@ -144,7 +234,7 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
         if (r.isVideo) {
           update(i, { message: "Starting video…" });
           const videoId = await uploadVideoToBunny(r.file, channelId, (pct) =>
-            update(i, { message: `Uploading video… ${pct}%` }),
+            update(i, { message: `Uploading main video… ${pct}%` }),
           );
           let previewId: string | null = null;
           if (r.preview) {
@@ -173,6 +263,7 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
             .single();
           if (error) throw error;
           pendingItemIds.push(item.id as string);
+          okPostIds.push(post.id as string);
           update(i, { state: "encoding", message: "Uploaded. Bunny is encoding it; it goes live automatically." });
         } else {
           const mediaKey = `posts/${post.id}/${id}.${extension(r.file)}`;
@@ -195,6 +286,7 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
             processing_status: "ready",
           });
           if (error) throw error;
+          okPostIds.push(post.id as string);
           update(i, { state: "done", message: undefined });
         }
       } catch (e) {
@@ -204,9 +296,17 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
       }
     }
 
-    // Videos stay hidden from users until Bunny finishes encoding. The server
-    // checks Bunny every minute on its own; poll a few times here as well so
-    // short clips show "Posted" without waiting.
+    // One item uploaded: go straight to its post (the post page shows the
+    // encoding progress and lets the admin adjust anything).
+    if (rows.length === 1 && okPostIds.length === 1) {
+      setBusy(false);
+      router.push(`/posts/${okPostIds[0]}`);
+      return;
+    }
+
+    // Several items: videos stay hidden from users until Bunny finishes
+    // encoding. The server checks Bunny every minute on its own; poll a few
+    // times here as well so short clips show "Posted" without waiting.
     for (let attempt = 0; attempt < 6 && pendingItemIds.length > 0; attempt++) {
       await new Promise((r) => setTimeout(r, 10_000));
       for (const itemId of [...pendingItemIds]) {
@@ -279,15 +379,22 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
           </Select>
         </Field>
         <Field label="Publishing">
-          <Select
-            value={publishNow ? "now" : "draft"}
-            onChange={(e) => setPublishNow(e.target.value === "now")}
-            disabled={busy}
-          >
+          <Select value={publishMode} onChange={(e) => setPublishMode(e.target.value as PublishMode)} disabled={busy}>
             <option value="now">Publish immediately</option>
+            <option value="schedule">Schedule for a date and time</option>
             <option value="draft">Save as draft</option>
           </Select>
         </Field>
+        {publishMode === "schedule" && (
+          <Field label="Publish at" hint="Your local time. The post goes live then, once its video is encoded.">
+            <Input
+              type="datetime-local"
+              value={publishLocal}
+              onChange={(e) => setPublishLocal(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-sm">
@@ -302,17 +409,21 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
       </label>
 
       <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-        {publishNow ? "Goes live as soon as the video is encoded" : "Saved as drafts"} · visible to {audienceLabel} ·{" "}
-        {premium ? "👑 full video needs a plan" : "free to play"} · the preview (if you add one) can be watched by
-        ads users before they buy.
+        {publishMode === "now"
+          ? "Goes live as soon as the video is encoded"
+          : publishMode === "schedule"
+            ? "Goes live at the time you pick"
+            : "Saved as drafts"}{" "}
+        · visible to {audienceLabel} · {premium ? "👑 full video needs a plan" : "free to play"} · the preview (if you
+        add one) can be watched by ads users before they buy.
       </p>
 
       <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
         <label className="block cursor-pointer text-center text-sm text-gray-600">
-          <span className="font-medium text-red-700">Choose videos or images</span>
+          <span className="font-medium text-red-700">1. Choose the main content (videos or images)</span>
           <span className="block text-xs text-gray-500">
-            Each file becomes its own post. Videos and previews stream from Bunny (up to 2 GB each) · JPG/PNG
-            images up to 50 MB
+            Each file becomes its own post. Then add a preview and a thumbnail to each, if you like. Videos and
+            previews stream from Bunny (up to 2 GB each) · JPG/PNG images up to 50 MB
           </span>
           <input
             type="file"
@@ -330,81 +441,92 @@ export function BulkUploader({ channels }: { channels: ChannelOption[] }) {
         {rows.length > 0 && (
           <>
             <ul className="mt-3 space-y-3">
-              {rows.map((r, i) => (
-                <li key={i} className="rounded-lg border border-gray-200 bg-white p-3 text-sm">
-                  <div className="flex items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <Input
-                        value={r.title}
-                        onChange={(e) => update(i, { title: e.target.value })}
-                        disabled={busy || r.state !== "waiting"}
-                        aria-label="Post title"
+              {rows.map((r, i) => {
+                const editable = !busy && r.state === "waiting";
+                return (
+                  <li key={i} className="rounded-lg border border-gray-200 bg-white p-3 text-sm">
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <Input
+                          value={r.title}
+                          onChange={(e) => update(i, { title: e.target.value })}
+                          disabled={!editable}
+                          placeholder="Title"
+                          aria-label="Post title"
+                        />
+                        <Textarea
+                          value={r.caption}
+                          onChange={(e) => update(i, { caption: e.target.value })}
+                          disabled={!editable}
+                          placeholder="Caption (optional)"
+                          aria-label="Post caption"
+                          rows={2}
+                        />
+                      </div>
+                      {editable && (
+                        <button
+                          type="button"
+                          onClick={() => remove(i)}
+                          className="text-xs text-gray-500 hover:text-red-700 hover:underline"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+
+                    <div className={`mt-3 grid gap-2 ${r.isVideo ? "sm:grid-cols-3" : ""}`}>
+                      <Slot
+                        title={r.isVideo ? "Main video" : "Main image"}
+                        file={r.file}
+                        hint={r.isVideo ? "The full video." : "The picture itself."}
+                        disabled
                       />
-                      <p className="mt-1 truncate text-xs text-gray-500">
-                        {r.isVideo ? "Video" : "Image"} · {r.file.name} · {formatBytes(r.file.size)}
-                      </p>
+                      {r.isVideo && (
+                        <>
+                          <Slot
+                            title="Preview"
+                            optional
+                            accept="video/*"
+                            file={r.preview}
+                            disabled={!editable}
+                            onPick={(f) => pickPreview(i, f)}
+                            onClear={() => update(i, { preview: undefined })}
+                            hint="A short clip ads users can watch before buying."
+                          />
+                          <Slot
+                            title="Thumbnail"
+                            optional
+                            accept="image/*"
+                            file={r.thumb}
+                            disabled={!editable}
+                            onPick={(f) => pickThumb(i, f)}
+                            onClear={() => update(i, { thumb: undefined })}
+                            hint="The cover picture. Empty: taken from the video automatically."
+                          />
+                        </>
+                      )}
                     </div>
-                    {r.state === "waiting" && !busy && (
-                      <button
-                        type="button"
-                        onClick={() => remove(i)}
-                        className="text-xs text-gray-500 hover:text-red-700 hover:underline"
+
+                    {(r.message || r.state === "done") && (
+                      <p
+                        className={`mt-2 text-xs ${
+                          r.state === "done"
+                            ? "text-green-700"
+                            : r.state === "error"
+                              ? "text-red-700"
+                              : r.state === "encoding"
+                                ? "text-blue-700"
+                                : "text-gray-500"
+                        }`}
                       >
-                        Remove
-                      </button>
+                        {r.state === "done" ? "Posted" : r.message}
+                      </p>
                     )}
-                  </div>
-
-                  {r.isVideo && r.state === "waiting" && (
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                      <label className="cursor-pointer font-medium text-red-700 hover:underline">
-                        {r.thumb ? `Thumbnail: ${r.thumb.name}` : "Add thumbnail"}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="sr-only"
-                          disabled={busy}
-                          onChange={(e) => {
-                            pickThumb(i, e.target.files?.[0]);
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
-                      <label className="cursor-pointer font-medium text-red-700 hover:underline">
-                        {r.preview ? `Preview: ${r.preview.name}` : "Add preview"}
-                        <input
-                          type="file"
-                          accept="video/*"
-                          className="sr-only"
-                          disabled={busy}
-                          onChange={(e) => {
-                            pickPreview(i, e.target.files?.[0]);
-                            e.target.value = "";
-                          }}
-                        />
-                      </label>
-                      {!r.thumb && <span className="text-gray-500">No thumbnail? One is taken from the video.</span>}
-                    </div>
-                  )}
-
-                  {(r.message || r.state === "done") && (
-                    <p
-                      className={`mt-1 text-xs ${
-                        r.state === "done"
-                          ? "text-green-700"
-                          : r.state === "error"
-                            ? "text-red-700"
-                            : r.state === "encoding"
-                              ? "text-blue-700"
-                              : "text-gray-500"
-                      }`}
-                    >
-                      {r.state === "done" ? "Posted" : r.message}
-                    </p>
-                  )}
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
+            {formError && <p className="mt-3 text-sm text-red-700">{formError}</p>}
             <Button type="button" onClick={run} disabled={busy || waiting === 0} className="mt-3 w-full">
               {busy ? "Uploading… keep this page open" : `Upload ${waiting} item(s)`}
             </Button>
