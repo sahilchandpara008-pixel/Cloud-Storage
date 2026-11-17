@@ -1,4 +1,5 @@
-import { Nav } from "@/components/nav";
+import { AdminShell } from "@/components/admin-shell";
+import type { NavGroup } from "@/components/nav";
 import { requireAdmin } from "@/lib/auth";
 import { signOut } from "../login/actions";
 
@@ -15,46 +16,43 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const pending = Number(stats?.pending_approvals ?? 0);
   const openRequests = (requests ?? []).length;
 
-  const items = [
-    { href: "/", label: "Dashboard" },
-    { href: "/channels", label: "Channels", badge: role === "owner" ? Number(stats?.pending_channels ?? 0) : 0 },
-    { href: "/posts", label: "Posts" },
-    ...(role === "owner"
+  // Same pages and the same owner-only rule as before; only grouped for the sidebar.
+  // (Every owner-only page also checks the role on the server.)
+  const groups: NavGroup[] = [
+    { label: "Overview", items: [{ href: "/", label: "Dashboard", icon: "◫" }] },
+    {
+      label: "Content",
+      items: [
+        { href: "/channels", label: "Channels", icon: "▦", badge: isOwner ? Number(stats?.pending_channels ?? 0) : 0 },
+        { href: "/posts", label: "Posts", icon: "▤" },
+      ],
+    },
+    ...(isOwner
       ? [
-          { href: "/approvals", label: "Approvals", badge: pending },
-          { href: "/payments", label: "Payments", badge: Number(pendingPayments ?? 0) },
-          { href: "/meta", label: "Meta Pixel" },
-          { href: "/users", label: "Users", badge: openRequests },
-          { href: "/requests", label: "Requests", badge: Number(openSupport ?? 0) },
-          { href: "/plans", label: "Plans" },
-          { href: "/admins", label: "Admins" },
+          {
+            label: "People",
+            items: [
+              { href: "/users", label: "Users", icon: "♙", badge: openRequests },
+              { href: "/approvals", label: "Approvals", icon: "✓", badge: pending },
+              { href: "/requests", label: "Requests", icon: "✉", badge: Number(openSupport ?? 0) },
+            ],
+          },
+          {
+            label: "Revenue",
+            items: [
+              { href: "/payments", label: "Payments", icon: "₹", badge: Number(pendingPayments ?? 0) },
+              { href: "/plans", label: "Plans", icon: "◇" },
+              { href: "/meta", label: "Meta Pixel", icon: "◎" },
+            ],
+          },
+          { label: "Settings", items: [{ href: "/admins", label: "Admins", icon: "⚙" }] },
         ]
       : []),
   ];
 
   return (
-    <div className="min-h-screen md:flex">
-      <aside className="border-b border-gray-200 bg-white p-4 md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:border-b-0 md:border-r">
-        <div className="mb-4 flex items-center gap-2 md:mb-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-700 text-sm font-bold text-white">
-            FV
-          </div>
-          <span className="font-semibold">Flixvault</span>
-        </div>
-        <Nav items={items} />
-        <div className="mt-4 border-t border-gray-200 pt-4 md:absolute md:bottom-4 md:left-4 md:right-4">
-          <p className="truncate text-xs text-gray-500" title={user.email ?? ""}>
-            {user.email}
-          </p>
-          <p className="mb-2 text-xs font-medium text-gray-700">
-            {role === "owner" ? "Owner" : "Content admin"}
-          </p>
-          <form action={signOut}>
-            <button className="text-sm font-medium text-red-700 hover:underline">Sign out</button>
-          </form>
-        </div>
-      </aside>
-      <main className="flex-1 p-4 md:p-8">{children}</main>
-    </div>
+    <AdminShell groups={groups} email={user.email ?? ""} isOwner={isOwner} signOut={signOut}>
+      {children}
+    </AdminShell>
   );
 }
