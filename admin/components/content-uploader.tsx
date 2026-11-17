@@ -369,7 +369,11 @@ export function ContentUploader({
           const thumb = await supabase.storage
             .from("public")
             .upload(thumbKey, cover.blob, { contentType: cover.contentType, upsert: false });
-          if (thumb.error) throw thumb.error;
+          if (thumb.error) {
+            // Never lose the video over its cover: Bunny's frame is used instead.
+            thumbKey = null;
+            thumbNote = " The thumbnail couldn't be saved; Bunny's frame is used. Change it on the post page.";
+          }
         }
 
         if (r.isVideo) {
