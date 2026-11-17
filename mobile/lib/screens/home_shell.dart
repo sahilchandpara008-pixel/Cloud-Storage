@@ -39,9 +39,16 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       final away = _backgroundedAt;
       _backgroundedAt = null;
       if (away != null && DateTime.now().difference(away) >= _awayBeforeReset) {
-        app.tab.value = _exploreTab;
+        _goToExplore();
       }
     }
+  }
+
+  /// Not while a UPI payment is still open: paying can take more than a
+  /// minute and the person must come back to it, not to Explore.
+  Future<void> _goToExplore() async {
+    if (await payments.hasUnfinishedPayment()) return;
+    if (mounted) app.tab.value = _exploreTab;
   }
 
   @override
