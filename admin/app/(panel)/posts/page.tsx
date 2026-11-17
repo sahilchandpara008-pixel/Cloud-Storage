@@ -5,6 +5,7 @@ import {
   Button,
   Empty,
   Flash,
+  Input,
   LinkButton,
   PageHeader,
   Select,
@@ -44,7 +45,7 @@ function hiddenReason(p: Row, now: number) {
 export default async function PostsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; error?: string; channel?: string; folder?: string; audience?: string; status?: string }>;
+  searchParams: Promise<{ ok?: string; error?: string; channel?: string; folder?: string; audience?: string; status?: string; q?: string }>;
 }) {
   const sp = await searchParams;
   const { supabase } = await requireAdmin();
@@ -60,6 +61,8 @@ export default async function PostsPage({
   if (sp.folder) query = query.eq("folder_id", sp.folder);
   if (sp.audience) query = query.eq("audience", sp.audience);
   if (sp.status) query = query.eq("status", sp.status);
+  const q = sp.q?.trim();
+  if (q) query = query.ilike("title", `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
   const { data } = await query;
   const rows = (data ?? []) as unknown as Row[];
 
@@ -72,14 +75,18 @@ export default async function PostsPage({
         subtitle="Everything posted to channels. Published posts appear in the app's Explore and Feed."
         action={
           <div className="flex gap-2">
-            <LinkButton variant="secondary" href="/posts/bulk">Bulk upload</LinkButton>
+            <LinkButton variant="secondary" href={sp.channel ? `/posts/new?mode=bulk&channel=${sp.channel}` : "/posts/new?mode=bulk"}>
+              Bulk upload
+            </LinkButton>
             <LinkButton href={sp.channel ? `/posts/new?channel=${sp.channel}` : "/posts/new"}>New post</LinkButton>
           </div>
         }
       />
       <Flash ok={sp.ok} error={sp.error} />
 
-      <form className="mb-4 grid gap-3 sm:grid-cols-4">
+      <form className="mb-4 grid gap-3 sm:grid-cols-5">
+        <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search titles" aria-label="Search titles" />
+        {sp.folder && <input type="hidden" name="folder" value={sp.folder} />}
         <Select name="channel" defaultValue={sp.channel ?? ""} aria-label="Channel">
           <option value="">All channels</option>
           {(channels ?? []).map((c) => (

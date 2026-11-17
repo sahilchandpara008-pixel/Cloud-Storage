@@ -1,5 +1,5 @@
-import { BulkUploader } from "@/components/bulk-uploader";
 import { PostForm } from "@/components/post-form";
+import { UploadTabs } from "@/components/upload-tabs";
 import { Card, Flash, PageHeader } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
 import { loadChannelOptions } from "@/lib/channels";
@@ -8,24 +8,28 @@ import { createPost } from "../actions";
 export default async function NewPostPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; channel?: string }>;
+  searchParams: Promise<{ error?: string; channel?: string; mode?: string }>;
 }) {
-  const { error, channel } = await searchParams;
+  const { error, channel, mode } = await searchParams;
   const { supabase } = await requireAdmin();
   const channels = await loadChannelOptions(supabase);
 
   return (
     <>
       <PageHeader
-        title="New post"
-        subtitle="Upload the main content, with an optional preview and thumbnail. Add several files to make several posts at once."
+        title="Upload content"
+        subtitle="Post into any channel, yours or one a user created. Single post: choose the main file, a preview and a thumbnail. Bulk upload: many files at once, one post each. Videos and previews are stored on Bunny."
       />
       <Flash error={error} />
       <Card>
         {channels.length === 0 ? (
           <p className="text-sm text-gray-600">Create a channel first.</p>
         ) : (
-          <BulkUploader channels={channels} initialChannelId={channel} />
+          <UploadTabs
+            channels={channels}
+            initialChannelId={channel}
+            initialMode={mode === "bulk" ? "bulk" : "single"}
+          />
         )}
       </Card>
 

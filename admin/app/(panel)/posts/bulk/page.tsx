@@ -1,25 +1,7 @@
-import { BulkUploader } from "@/components/bulk-uploader";
-import { Card, PageHeader } from "@/components/ui";
-import { requireAdmin } from "@/lib/auth";
-import { loadChannelOptions } from "@/lib/channels";
+import { redirect } from "next/navigation";
 
-export default async function BulkUploadPage() {
-  const { supabase } = await requireAdmin();
-  const channels = await loadChannelOptions(supabase);
-
-  return (
-    <>
-      <PageHeader
-        title="Bulk upload"
-        subtitle="Upload many videos or images into a channel at once. Each file becomes its own post, with its own optional preview and thumbnail. Videos and previews are saved on Bunny, with the same audience, premium and approval rules as any post."
-      />
-      <Card>
-        {channels.length === 0 ? (
-          <p className="text-sm text-gray-600">Create a channel first.</p>
-        ) : (
-          <BulkUploader channels={channels} />
-        )}
-      </Card>
-    </>
-  );
+// Bulk upload now lives on the upload page as its own tab.
+export default async function BulkUploadPage({ searchParams }: { searchParams: Promise<{ channel?: string }> }) {
+  const { channel } = await searchParams;
+  redirect(channel ? `/posts/new?mode=bulk&channel=${encodeURIComponent(channel)}` : "/posts/new?mode=bulk");
 }

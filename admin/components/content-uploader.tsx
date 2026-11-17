@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { MAX_THUMBNAIL_BYTES, MAX_VIDEO_BYTES, uploadVideoToBunny } from "@/lib/bunny-upload";
 import { AUDIENCES } from "@/lib/format";
@@ -21,18 +21,18 @@ type Row = {
   isVideo: boolean;
   title: string;
   caption: string;
-  thumb?: File; // optional hand-picked cover (otherwise taken from the video)
-  preview?: File; // optional preview clip (played by ads users before they buy)
+  thumb?: File; // optional hand-picked cover (otherwise taken from the video / image)
+  preview?: File; // optional preview clip (videos only; ads users watch it before they buy)
   state: "waiting" | "uploading" | "encoding" | "done" | "error";
   message?: string;
 };
 
 type PublishMode = "now" | "schedule" | "draft";
 
-// One box in a file's row: shows what's chosen, or a clear button to choose it.
+// One box: shows what is chosen, or a clear button to choose it.
 function Slot({
   title,
-  optional,
+  required,
   hint,
   accept,
   file,
@@ -41,7 +41,7 @@ function Slot({
   onClear,
 }: {
   title: string;
-  optional?: boolean;
+  required?: boolean;
   hint: string;
   accept?: string;
   file?: File;
@@ -53,7 +53,7 @@ function Slot({
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-2.5 text-xs">
       <p className="font-medium text-gray-800">
         {title}
-        {optional && <span className="font-normal text-gray-400"> · optional</span>}
+        <span className="font-normal text-gray-400">{required ? " · required" : " · optional"}</span>
       </p>
       {file ? (
         <div className="mt-1 flex items-center justify-between gap-2">
@@ -90,20 +90,28 @@ function Slot({
   );
 }
 
-// Upload content into any channel (the admin's own or one created by a user):
-// each main file becomes its own post, with an optional preview clip and an
-// optional thumbnail. Videos and previews are stored on Bunny Stream and
-// streamed from there; images go to Supabase Storage. Visibility (audience,
-// premium) follows the same rules as every other post -- nothing here bypasses
-// post_visible() or the premium gate.
-export function BulkUploader({
+// Upload content into any channel (the admin's own or one created by a user).
+//   single: ONE post. The main file, the preview and the thumbnail are three
+//           boxes you see straight away, plus title and caption.
+//   bulk:   MANY files at once, each becoming its own post with its own
+//           optional preview and thumbnail.
+// Videos and previews are stored on Bunny Stream and streamed from there;
+// images go to Supabase Storage. Visibility (audience, premium) follows the same
+// rules as every other post -- nothing here bypasses post_visible() or the
+// premium gate.
+export function ContentUploader({
   channels,
   initialChannelId,
+  mode,
+  onBusyChange,
 }: {
   channels: ChannelOption[];
   initialChannelId?: string;
+  mode: "single" | "bulk";
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const router = useRouter();
+  const single = mode === "single";
   const [channelId, setChannelId] = useState(
     channels.some((c) => c.id === initialChannelId) ? (initialChannelId as string) : (channels[0]?.id ?? ""),
   );
@@ -116,11 +124,30 @@ export function BulkUploader({
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Single mode: the preview / thumbnail / title / caption can be filled in
+  // before the main file is chosen; they move into the row once it is.
+  const [pre, setPre] = useState<{ thumb?: File; preview?: File }>({});
+  const [preTitle, setPreTitle] = useState("");
+  const [preCaption, setPreCaption] = useState("");
+
+  useEffect(() => {
+    onBusyChange?.(busy);
+  }, [busy, onBusyChange]);
+
   const channel = useMemo(() => channels.find((c) => c.id === channelId), [channels, channelId]);
   const lockedAudience = channel && channel.audience !== "all" ? channel.audience : null;
   const effectiveAudience = lockedAudience ?? audience;
   const audienceLabel = AUDIENCES.find((a) => a.value === effectiveAudience)?.label ?? effectiveAudience;
 
+  function update(i: number, patch: Partial<Row>) {
+    setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  }
+
+  function remove(i: number) {
+    setRows((prev) => prev.filter((_, j) => j !== i));
+  }
+
+  // Bulk: add files as new rows.
   function choose(list: FileList | null) {
     const picked = Array.from(list ?? []).map<Row>((f) => ({
       file: f,
@@ -132,26 +159,82 @@ export function BulkUploader({
     setRows((prev) => [...prev, ...picked]);
   }
 
-  function update(i: number, patch: Partial<Row>) {
-    setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  // Single: the main file was chosen -> build the one row, keeping anything
+  // already filled in.
+  function startFromFile(file: File | undefined) {
+    if (!file) return;
+    const isVideo = file.type.startsWith("video/");
+    if (!isVideo && !file.type.startsWith("image/")) {
+      setFormError("Choose a video or an image as the main file.");
+      return;
+    }
+    setFormError(null);
+    setRows([
+      {
+        file,
+        isVideo,
+        title: preTitle.trim() || file.name.replace(/\.[^.]+$/, ""),
+        caption: preCaption,
+        thumb: pre.thumb,
+        preview: isVideo ? pre.preview : undefined,
+        state: "waiting",
+        message: !isVideo && pre.preview ? "Previews are for videos only, so the preview was left out." : undefined,
+      },
+    ]);
+    setPre({});
+    setPreTitle("");
+    setPreCaption("");
   }
 
-  function remove(i: number) {
-    setRows((prev) => prev.filter((_, j) => j !== i));
+  // Single: take the main file back out (to choose another one).
+  function clearMain() {
+    const r = rows[0];
+    if (r) {
+      setPre({ thumb: r.thumb, preview: r.preview });
+      setPreTitle(r.title);
+      setPreCaption(r.caption);
+    }
+    setRows([]);
+  }
+
+  function checkThumb(file: File | undefined): string | null {
+    if (!file) return null;
+    if (!file.type.startsWith("image/")) return "The thumbnail must be a picture";
+    if (file.size > MAX_THUMBNAIL_BYTES) return "The thumbnail must be under 5 MB";
+    return null;
+  }
+
+  function checkPreview(file: File | undefined): string | null {
+    if (!file) return null;
+    if (!file.type.startsWith("video/")) return "The preview must be a video";
+    if (file.size > MAX_VIDEO_BYTES) return "The preview must be under 2 GB";
+    return null;
   }
 
   function pickThumb(i: number, file: File | undefined) {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) return update(i, { message: "The thumbnail must be a picture" });
-    if (file.size > MAX_THUMBNAIL_BYTES) return update(i, { message: "The thumbnail must be under 5 MB" });
-    update(i, { thumb: file, message: undefined });
+    const bad = checkThumb(file);
+    if (bad) return update(i, { message: bad });
+    if (file) update(i, { thumb: file, message: undefined });
   }
 
   function pickPreview(i: number, file: File | undefined) {
-    if (!file) return;
-    if (!file.type.startsWith("video/")) return update(i, { message: "The preview must be a video" });
-    if (file.size > MAX_VIDEO_BYTES) return update(i, { message: "The preview must be under 2 GB" });
-    update(i, { preview: file, message: undefined });
+    const bad = checkPreview(file);
+    if (bad) return update(i, { message: bad });
+    if (file) update(i, { preview: file, message: undefined });
+  }
+
+  function pickPreThumb(file: File | undefined) {
+    const bad = checkThumb(file);
+    if (bad) return setFormError(bad);
+    setFormError(null);
+    if (file) setPre((p) => ({ ...p, thumb: file }));
+  }
+
+  function pickPrePreview(file: File | undefined) {
+    const bad = checkPreview(file);
+    if (bad) return setFormError(bad);
+    setFormError(null);
+    if (file) setPre((p) => ({ ...p, preview: file }));
   }
 
   async function run() {
@@ -217,8 +300,9 @@ export function BulkUploader({
         if (postError) throw postError;
         createdPostId = post.id as string;
 
-        // Cover: the hand-picked picture, else a frame from the video, else
-        // (browser couldn't decode it) Bunny's own frame is saved later.
+        // Cover: the hand-picked picture, else a frame from the video (or the
+        // image itself), else (browser couldn't decode it) Bunny's own frame is
+        // saved later.
         const id = crypto.randomUUID();
         let thumbKey: string | null = null;
         const cover: Blob | null = r.thumb ? await toJpegThumbnail(r.thumb) : (info?.thumbnail ?? null);
@@ -338,6 +422,98 @@ export function BulkUploader({
   }
 
   const waiting = rows.filter((r) => r.state === "waiting").length;
+  const uploadLabel = busy
+    ? "Uploading… keep this page open"
+    : single
+      ? publishMode === "draft"
+        ? "Upload and save as draft"
+        : publishMode === "schedule"
+          ? "Upload and schedule"
+          : "Upload and publish"
+      : `Upload ${waiting} item(s)`;
+
+  function renderRow(r: Row, i: number) {
+    const editable = !busy && r.state === "waiting";
+    return (
+      <li key={i} className="rounded-lg border border-gray-200 bg-white p-3 text-sm">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Input
+              value={r.title}
+              onChange={(e) => update(i, { title: e.target.value })}
+              disabled={!editable}
+              placeholder="Title"
+              aria-label="Post title"
+            />
+            <Textarea
+              value={r.caption}
+              onChange={(e) => update(i, { caption: e.target.value })}
+              disabled={!editable}
+              placeholder="Caption (optional)"
+              aria-label="Post caption"
+              rows={2}
+            />
+          </div>
+          {editable && !single && (
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              className="text-xs text-gray-500 hover:text-red-700 hover:underline"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+
+        <div className={`mt-3 grid gap-2 ${r.isVideo ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          <Slot
+            title={r.isVideo ? "Main video" : "Main image"}
+            required
+            file={r.file}
+            hint={r.isVideo ? "The full video." : "The picture itself."}
+            disabled={!single || !editable}
+            onClear={single ? clearMain : undefined}
+          />
+          {r.isVideo && (
+            <Slot
+              title="Preview"
+              accept="video/*"
+              file={r.preview}
+              disabled={!editable}
+              onPick={(f) => pickPreview(i, f)}
+              onClear={() => update(i, { preview: undefined })}
+              hint="A short clip ads users can watch before buying."
+            />
+          )}
+          <Slot
+            title="Thumbnail"
+            accept="image/*"
+            file={r.thumb}
+            disabled={!editable}
+            onPick={(f) => pickThumb(i, f)}
+            onClear={() => update(i, { thumb: undefined })}
+            hint={`The cover picture. Empty: taken from the ${r.isVideo ? "video" : "image"} automatically.`}
+          />
+        </div>
+
+        {(r.message || r.state === "done") && (
+          <p
+            className={`mt-2 text-xs ${
+              r.state === "done"
+                ? "text-green-700"
+                : r.state === "error"
+                  ? "text-red-700"
+                  : r.state === "encoding"
+                    ? "text-blue-700"
+                    : "text-gray-500"
+            }`}
+          >
+            {r.state === "done" ? "Posted" : r.message}
+          </p>
+        )}
+      </li>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -363,7 +539,7 @@ export function BulkUploader({
           </Select>
         </Field>
         <Field
-          label="Who can see these posts"
+          label="Who can see this"
           hint={lockedAudience ? "Set by the channel's audience" : "Everyone, organic users only, or users from your ads only"}
         >
           <Select
@@ -386,7 +562,7 @@ export function BulkUploader({
           </Select>
         </Field>
         {publishMode === "schedule" && (
-          <Field label="Publish at" hint="Your local time. The post goes live then, once its video is encoded.">
+          <Field label="Publish at" hint="Your local time. It goes live then, once its video is encoded.">
             <Input
               type="datetime-local"
               value={publishLocal}
@@ -413,126 +589,100 @@ export function BulkUploader({
           ? "Goes live as soon as the video is encoded"
           : publishMode === "schedule"
             ? "Goes live at the time you pick"
-            : "Saved as drafts"}{" "}
+            : "Saved as a draft"}{" "}
         · visible to {audienceLabel} · {premium ? "👑 full video needs a plan" : "free to play"} · the preview (if you
         add one) can be watched by ads users before they buy.
       </p>
 
-      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
-        <label className="block cursor-pointer text-center text-sm text-gray-600">
-          <span className="font-medium text-red-700">1. Choose the main content (videos or images)</span>
-          <span className="block text-xs text-gray-500">
-            Each file becomes its own post. Then add a preview and a thumbnail to each, if you like. Videos and
-            previews stream from Bunny (up to 2 GB each) · JPG/PNG images up to 50 MB
-          </span>
-          <input
-            type="file"
-            multiple
-            accept="video/*,image/*"
-            className="sr-only"
-            disabled={busy}
-            onChange={(e) => {
-              choose(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </label>
+      {single ? (
+        <div className="space-y-3">
+          {rows.length === 0 ? (
+            <div className="space-y-3 rounded-lg border border-gray-200 bg-white p-3 text-sm">
+              <Input
+                value={preTitle}
+                onChange={(e) => setPreTitle(e.target.value)}
+                placeholder="Title (filled in from the file name if you leave it empty)"
+                aria-label="Post title"
+              />
+              <Textarea
+                value={preCaption}
+                onChange={(e) => setPreCaption(e.target.value)}
+                placeholder="Caption (optional)"
+                aria-label="Post caption"
+                rows={2}
+              />
+              <div className="grid gap-2 sm:grid-cols-3">
+                <Slot
+                  title="Main file"
+                  required
+                  accept="video/*,image/*"
+                  onPick={startFromFile}
+                  hint="The full video, or the picture. Up to 2 GB for a video."
+                />
+                <Slot
+                  title="Preview"
+                  accept="video/*"
+                  file={pre.preview}
+                  onPick={pickPrePreview}
+                  onClear={() => setPre((p) => ({ ...p, preview: undefined }))}
+                  hint="A short clip ads users can watch before buying (videos only)."
+                />
+                <Slot
+                  title="Thumbnail"
+                  accept="image/*"
+                  file={pre.thumb}
+                  onPick={pickPreThumb}
+                  onClear={() => setPre((p) => ({ ...p, thumb: undefined }))}
+                  hint="The cover picture. Empty: taken from the main file automatically."
+                />
+              </div>
+              {formError && <p className="text-sm text-red-700">{formError}</p>}
+              <Button type="button" disabled className="w-full">
+                Choose the main file to continue
+              </Button>
+            </div>
+          ) : (
+            <>
+              <ul className="space-y-3">{rows.map(renderRow)}</ul>
+              {formError && <p className="text-sm text-red-700">{formError}</p>}
+              <Button type="button" onClick={run} disabled={busy || waiting === 0} className="w-full">
+                {uploadLabel}
+              </Button>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
+          <label className="block cursor-pointer text-center text-sm text-gray-600">
+            <span className="font-medium text-red-700">Choose many videos or images at once</span>
+            <span className="block text-xs text-gray-500">
+              Each file becomes its own post, with its own title, preview and thumbnail boxes below. Videos and
+              previews stream from Bunny (up to 2 GB each) · JPG/PNG images up to 50 MB
+            </span>
+            <input
+              type="file"
+              multiple
+              accept="video/*,image/*"
+              className="sr-only"
+              disabled={busy}
+              onChange={(e) => {
+                choose(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
 
-        {rows.length > 0 && (
-          <>
-            <ul className="mt-3 space-y-3">
-              {rows.map((r, i) => {
-                const editable = !busy && r.state === "waiting";
-                return (
-                  <li key={i} className="rounded-lg border border-gray-200 bg-white p-3 text-sm">
-                    <div className="flex items-start gap-2">
-                      <div className="min-w-0 flex-1 space-y-2">
-                        <Input
-                          value={r.title}
-                          onChange={(e) => update(i, { title: e.target.value })}
-                          disabled={!editable}
-                          placeholder="Title"
-                          aria-label="Post title"
-                        />
-                        <Textarea
-                          value={r.caption}
-                          onChange={(e) => update(i, { caption: e.target.value })}
-                          disabled={!editable}
-                          placeholder="Caption (optional)"
-                          aria-label="Post caption"
-                          rows={2}
-                        />
-                      </div>
-                      {editable && (
-                        <button
-                          type="button"
-                          onClick={() => remove(i)}
-                          className="text-xs text-gray-500 hover:text-red-700 hover:underline"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-
-                    <div className={`mt-3 grid gap-2 ${r.isVideo ? "sm:grid-cols-3" : ""}`}>
-                      <Slot
-                        title={r.isVideo ? "Main video" : "Main image"}
-                        file={r.file}
-                        hint={r.isVideo ? "The full video." : "The picture itself."}
-                        disabled
-                      />
-                      {r.isVideo && (
-                        <>
-                          <Slot
-                            title="Preview"
-                            optional
-                            accept="video/*"
-                            file={r.preview}
-                            disabled={!editable}
-                            onPick={(f) => pickPreview(i, f)}
-                            onClear={() => update(i, { preview: undefined })}
-                            hint="A short clip ads users can watch before buying."
-                          />
-                          <Slot
-                            title="Thumbnail"
-                            optional
-                            accept="image/*"
-                            file={r.thumb}
-                            disabled={!editable}
-                            onPick={(f) => pickThumb(i, f)}
-                            onClear={() => update(i, { thumb: undefined })}
-                            hint="The cover picture. Empty: taken from the video automatically."
-                          />
-                        </>
-                      )}
-                    </div>
-
-                    {(r.message || r.state === "done") && (
-                      <p
-                        className={`mt-2 text-xs ${
-                          r.state === "done"
-                            ? "text-green-700"
-                            : r.state === "error"
-                              ? "text-red-700"
-                              : r.state === "encoding"
-                                ? "text-blue-700"
-                                : "text-gray-500"
-                        }`}
-                      >
-                        {r.state === "done" ? "Posted" : r.message}
-                      </p>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            {formError && <p className="mt-3 text-sm text-red-700">{formError}</p>}
-            <Button type="button" onClick={run} disabled={busy || waiting === 0} className="mt-3 w-full">
-              {busy ? "Uploading… keep this page open" : `Upload ${waiting} item(s)`}
-            </Button>
-          </>
-        )}
-      </div>
+          {rows.length > 0 && (
+            <>
+              <ul className="mt-3 space-y-3">{rows.map(renderRow)}</ul>
+              {formError && <p className="mt-3 text-sm text-red-700">{formError}</p>}
+              <Button type="button" onClick={run} disabled={busy || waiting === 0} className="mt-3 w-full">
+                {uploadLabel}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

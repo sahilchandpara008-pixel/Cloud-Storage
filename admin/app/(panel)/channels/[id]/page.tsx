@@ -51,6 +51,9 @@ export default async function ChannelPage({
             <LinkButton variant="secondary" href={`/posts?channel=${id}`}>
               View posts
             </LinkButton>
+            <LinkButton variant="secondary" href={`/posts/new?mode=bulk&channel=${id}`}>
+              Bulk upload
+            </LinkButton>
             <LinkButton href={`/posts/new?channel=${id}`}>New post</LinkButton>
           </div>
         }
