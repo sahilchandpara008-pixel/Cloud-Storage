@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase/browser";
 import type { ChannelOption } from "./post-form";
 
 type Row = {
-  file: File; // the main content
+  file?: File; // the main content (empty on a card added with "Add another content")
   isVideo: boolean;
   title: string;
   caption: string;
@@ -146,6 +146,36 @@ export function ContentUploader({
     setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   }
 
+  // Bulk: an empty card to fill in by hand (title, main file, preview, thumbnail).
+  function addBlank() {
+    setFormError(null);
+    setRows((prev) => [...prev, { isVideo: false, title: "", caption: "", state: "waiting" }]);
+  }
+
+  // Bulk: the main file of one card was chosen (or changed).
+  function setRowMain(i: number, file: File | undefined) {
+    if (!file) return;
+    const isVideo = file.type.startsWith("video/");
+    if (!isVideo && !file.type.startsWith("image/")) {
+      update(i, { message: "Choose a video or an image as the main file." });
+      return;
+    }
+    setRows((prev) =>
+      prev.map((r, j) =>
+        j === i
+          ? {
+              ...r,
+              file,
+              isVideo,
+              title: r.title.trim() ? r.title : file.name.replace(/\.[^.]+$/, ""),
+              preview: isVideo ? r.preview : undefined,
+              message: !isVideo && r.preview ? "Previews are for videos only, so the preview was left out." : undefined,
+            }
+          : r,
+      ),
+    );
+  }
+
   function remove(i: number) {
     setRows((prev) => prev.filter((_, j) => j !== i));
   }
@@ -243,6 +273,11 @@ export function ContentUploader({
   async function run() {
     setFormError(null);
     setSummary(null);
+    const missing = rows.findIndex((r) => r.state === "waiting" && !r.file);
+    if (missing >= 0) {
+      setFormError(`Content ${missing + 1} has no main file yet. Choose one, or remove that card.`);
+      return;
+    }
     if (!channelId) {
       setFormError("Choose the channel to upload into.");
       return;
@@ -271,9 +306,10 @@ export function ContentUploader({
 
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (r.state !== "waiting") continue;
+      if (r.state !== "waiting" || !r.file) continue;
+      const file = r.file;
       const limit = r.isVideo ? MAX_VIDEO_BYTES : MAX_UPLOAD_BYTES;
-      if (r.file.size > limit) {
+      if (file.size > limit) {
         update(i, { state: "error", message: `Larger than ${r.isVideo ? "2 GB" : "50 MB (free plan limit)"}` });
         continue;
       }
@@ -285,7 +321,7 @@ export function ContentUploader({
         // video once it has encoded it (see the bunny-stream-sync function).
         let info: MediaInfo | null = null;
         try {
-          info = await readMedia(r.file);
+          info = await readMedia(file);
         } catch (e) {
           if (!r.isVideo) throw e;
         }
@@ -296,7 +332,7 @@ export function ContentUploader({
           .insert({
             channel_id: channelId,
             folder_id: folderId || null,
-            title: r.title.trim() || r.file.name,
+            title: r.title.trim() || file.name,
             caption: r.caption.trim() || null,
             audience: effectiveAudience,
             status: publishMode === "draft" ? "draft" : "published",
@@ -325,7 +361,7 @@ export function ContentUploader({
 
         if (r.isVideo) {
           update(i, { message: "Starting video…" });
-          const videoId = await uploadVideoToBunny(r.file, channelId, (pct) =>
+          const videoId = await uploadVideoToBunny(file, channelId, (pct) =>
             update(i, { message: `Uploading main video… ${pct}%` }),
           );
           let previewId: string | null = null;
@@ -358,11 +394,11 @@ export function ContentUploader({
           okPostIds.push(post.id as string);
           update(i, { state: "encoding", message: "Uploaded. Bunny is encoding it; it goes live automatically." });
         } else {
-          const mediaKey = `posts/${post.id}/${id}.${extension(r.file)}`;
+          const mediaKey = `posts/${post.id}/${id}.${extension(file)}`;
           update(i, { message: "Uploading…" });
           const media = await supabase.storage
             .from("media")
-            .upload(mediaKey, r.file, { contentType: r.file.type, upsert: false });
+            .upload(mediaKey, file, { contentType: file.type, upsert: false });
           if (media.error) throw media.error;
 
           const { error } = await supabase.from("post_items").insert({
@@ -440,7 +476,7 @@ export function ContentUploader({
     router.refresh();
   }
 
-  const waiting = rows.filter((r) => r.state === "waiting").length;
+  const waiting = rows.filter((r) => r.state === "waiting" && r.file).length;
   const uploadLabel = busy
     ? "Uploading… keep this page open"
     : single
@@ -453,8 +489,10 @@ export function ContentUploader({
 
   function renderRow(r: Row, i: number) {
     const editable = !busy && r.state === "waiting";
+    const showPreview = !r.file || r.isVideo;
     return (
       <li key={i} className="rounded-lg border border-gray-200 bg-white p-3 text-sm">
+        {!single && <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Content {i + 1}</p>}
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1 space-y-2">
             <Input
@@ -484,16 +522,18 @@ export function ContentUploader({
           )}
         </div>
 
-        <div className={`mt-3 grid gap-2 ${r.isVideo ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        <div className={`mt-3 grid gap-2 ${showPreview ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
           <Slot
-            title={r.isVideo ? "Main video" : "Main image"}
+            title={!r.file ? "Main file" : r.isVideo ? "Main video" : "Main image"}
             required
+            accept="video/*,image/*"
             file={r.file}
-            hint={r.isVideo ? "The full video." : "The picture itself."}
-            disabled={!single || !editable}
-            onClear={single ? clearMain : undefined}
+            hint={!r.file ? "The full video, or the picture." : r.isVideo ? "The full video." : "The picture itself."}
+            disabled={!editable}
+            onPick={(f) => setRowMain(i, f)}
+            onClear={single ? clearMain : () => update(i, { file: undefined })}
           />
-          {r.isVideo && (
+          {showPreview && (
             <Slot
               title="Preview"
               accept="video/*"
@@ -511,7 +551,7 @@ export function ContentUploader({
             disabled={!editable}
             onPick={(f) => pickThumb(i, f)}
             onClear={() => update(i, { thumb: undefined })}
-            hint={`The cover picture. Empty: taken from the ${r.isVideo ? "video" : "image"} automatically.`}
+            hint={`The cover picture. Empty: taken from the ${!r.file ? "main file" : r.isVideo ? "video" : "image"} automatically.`}
           />
         </div>
 
@@ -703,9 +743,20 @@ export function ContentUploader({
             />
           </label>
 
+          {rows.length > 0 && <ul className="mt-3 space-y-3">{rows.map(renderRow)}</ul>}
+
+          <button
+            type="button"
+            onClick={addBlank}
+            disabled={busy}
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-700 hover:border-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="text-lg leading-none">+</span>
+            {rows.length === 0 ? "Add content one by one" : "Add another content"}
+          </button>
+
           {rows.length > 0 && (
             <>
-              <ul className="mt-3 space-y-3">{rows.map(renderRow)}</ul>
               {formError && <p className="mt-3 text-sm text-red-700">{formError}</p>}
               <Button type="button" onClick={run} disabled={busy || waiting === 0} className="mt-3 w-full">
                 {uploadLabel}
