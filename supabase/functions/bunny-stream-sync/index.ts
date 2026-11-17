@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
       .limit(25),
   ]);
 
-  const result = { ready: 0, failed: 0, thumbnails: 0, stillProcessing: 0 };
+  const result = { ready: 0, failed: 0, thumbnails: 0, stillProcessing: 0, trailersReady: 0, trailersFailed: 0 };
 
   async function captureThumbnail(item: Item): Promise<boolean> {
     const res = await fetch(await signBunnyDirectoryUrl(host, item.bunny_video_id, tokenKey, "thumbnail.jpg"));
@@ -130,6 +130,31 @@ Deno.serve(async (req) => {
 
   for (const item of (noThumb ?? []) as Item[]) {
     if (await captureThumbnail(item)) result.thumbnails++;
+  }
+
+  // Trailers (previews) on Bunny: they never gate a post's visibility, they
+  // only decide whether the app offers the Trailer button. The row is only
+  // written once the upload has finished, so a pending trailer is simply
+  // still encoding.
+  const { data: pendingTrailers } = await admin
+    .from("post_items")
+    .select("id, trailer_bunny_video_id")
+    .eq("trailer_status", "pending")
+    .not("trailer_bunny_video_id", "is", null)
+    .limit(25);
+  for (const t of pendingTrailers ?? []) {
+    const res = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${t.trailer_bunny_video_id}`, {
+      headers: { AccessKey: apiKey, Accept: "application/json" },
+    }).catch(() => null);
+    if (!res?.ok) continue;
+    const video = await res.json();
+    if (video.status === 4) {
+      await admin.from("post_items").update({ trailer_status: "ready" }).eq("id", t.id);
+      result.trailersReady++;
+    } else if (video.status === 5 || video.status === 6) {
+      await admin.from("post_items").update({ trailer_status: "failed" }).eq("id", t.id);
+      result.trailersFailed++;
+    }
   }
 
   return json(result);

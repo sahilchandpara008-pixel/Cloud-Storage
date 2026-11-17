@@ -276,10 +276,16 @@ class Backend {
   /// Short-lived, adaptive-quality (HLS) playback link for a Bunny-backed
   /// video item. The Edge Function enforces the same visibility/premium
   /// rule as [mediaUrl] -- it refuses just like the storage signed URL would.
-  static Future<String> bunnyStreamUrl(String itemId) async {
+  ///
+  /// With [trailer] it signs the item's preview instead of the full video;
+  /// the database applies the (looser) trailer rule for that.
+  static Future<String> bunnyStreamUrl(
+    String itemId, {
+    bool trailer = false,
+  }) async {
     final res = await sb.functions.invoke(
       'bunny-stream-url',
-      body: {'item_id': itemId},
+      body: {'item_id': itemId, if (trailer) 'kind': 'trailer'},
     );
     final url = (res.data as Map?)?['url'] as String?;
     if (url == null) throw StateError('This video is not available right now.');

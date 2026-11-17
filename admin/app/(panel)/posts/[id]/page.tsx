@@ -17,7 +17,8 @@ type Item = {
   duration_s: number | null;
   position: number;
   thumb_key: string | null;
-  trailer_key: string | null;
+  has_trailer: boolean;
+  trailer_status: string | null;
 };
 
 export default async function PostPage({
@@ -42,7 +43,7 @@ export default async function PostPage({
     loadChannelOptions(supabase),
     supabase
       .from("post_items")
-      .select("id, kind, is_premium, processing_status, duration_s, position, thumb_key, trailer_key")
+      .select("id, kind, is_premium, processing_status, duration_s, position, thumb_key, has_trailer, trailer_status")
       .eq("post_id", id)
       .order("position"),
   ]);
@@ -68,7 +69,7 @@ export default async function PostPage({
           <h2 className="mb-1 font-semibold">Videos &amp; images</h2>
           <p className="mb-4 text-sm text-gray-500">
             Mark each item 👑 premium (login + plan needed to play) or free. Ads users can watch a
-            video&apos;s trailer before buying.
+            video&apos;s preview before buying. Videos and previews are stored on Bunny.
           </p>
           <ul className="mb-4 space-y-2">
             {items.length === 0 && <li className="text-sm text-gray-500">No media yet.</li>}
@@ -94,7 +95,9 @@ export default async function PostPage({
                   </p>
                   <div className="mt-1 flex gap-1">
                     {item.is_premium ? <Badge tone="amber">👑 Premium</Badge> : <Badge>Free</Badge>}
-                    {item.trailer_key && <Badge tone="purple">Trailer</Badge>}
+                    {item.has_trailer && <Badge tone="purple">Preview</Badge>}
+                    {item.trailer_status === "pending" && <Badge tone="blue">Preview processing…</Badge>}
+                    {item.trailer_status === "failed" && <Badge tone="red">Preview failed</Badge>}
                     {item.processing_status !== "ready" && (
                       <Badge tone={item.processing_status === "failed" ? "red" : "blue"}>
                         {item.processing_status === "failed" ? "Processing failed" : "Processing…"}
@@ -110,7 +113,11 @@ export default async function PostPage({
                     </button>
                   </form>
                   {item.kind === "video" && (
-                    <TrailerUpload postId={id} itemId={item.id} hasTrailer={!!item.trailer_key} />
+                    <TrailerUpload
+                      channelId={post.channel_id}
+                      itemId={item.id}
+                      hasTrailer={item.has_trailer || item.trailer_status !== null}
+                    />
                   )}
                   {item.processing_status === "pending" && <CheckEncoding itemId={item.id} />}
                   <form action={deleteItem.bind(null, id, item.id)}>

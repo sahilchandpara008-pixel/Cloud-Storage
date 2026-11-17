@@ -1,16 +1,15 @@
 "use client";
 
-import { Upload as TusUpload } from "tus-js-client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
+import { MAX_VIDEO_BYTES, uploadVideoToBunny } from "@/lib/bunny-upload";
 import { MAX_UPLOAD_BYTES, extension, formatBytes, readMedia, type MediaInfo } from "@/lib/media";
 import { createClient } from "@/lib/supabase/browser";
 
 // Videos go to Bunny Stream (seamless adaptive streaming); images still go to
 // Supabase Storage as before. Bunny has no practical size limit, so videos
 // skip the 50 MB check that still applies to images.
-const MAX_VIDEO_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB, generous ceiling
 
 type Row = { name: string; size: number; state: "waiting" | "uploading" | "done" | "error"; message?: string };
 
@@ -50,31 +49,6 @@ export function MediaUploader({
     setRows((prev) => prev.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   }
 
-  // Uploads a video directly to Bunny Stream over TUS, with progress.
-  function uploadToBunny(
-    file: File,
-    auth: { videoId: string; libraryId: string; authorizationSignature: string; authorizationExpire: number },
-    onProgress: (pct: number) => void,
-  ) {
-    return new Promise<void>((resolve, reject) => {
-      const upload = new TusUpload(file, {
-        endpoint: "https://video.bunnycdn.com/tusupload",
-        retryDelays: [0, 1000, 3000, 5000],
-        headers: {
-          AuthorizationSignature: auth.authorizationSignature,
-          AuthorizationExpire: String(auth.authorizationExpire),
-          VideoId: auth.videoId,
-          LibraryId: auth.libraryId,
-        },
-        metadata: { filetype: file.type, title: file.name },
-        onError: reject,
-        onProgress: (sent, total) => onProgress(Math.round((sent / total) * 100)),
-        onSuccess: () => resolve(),
-      });
-      upload.start();
-    });
-  }
-
   async function upload() {
     setBusy(true);
     const supabase = createClient();
@@ -108,20 +82,16 @@ export function MediaUploader({
 
         if (isVideo) {
           update(i, { message: "Starting video…" });
-          const { data: auth, error: createError } = await supabase.functions.invoke("bunny-stream-create", {
-            body: { title: file.name, channel_id: channelId },
-          });
-          if (createError) throw createError;
-          if (auth?.error) throw new Error(auth.error);
-
-          await uploadToBunny(file, auth, (pct) => update(i, { message: `Uploading… ${pct}%` }));
+          const videoId = await uploadVideoToBunny(file, channelId, (pct) =>
+            update(i, { message: `Uploading… ${pct}%` }),
+          );
 
           const { error } = await supabase.from("post_items").insert({
             post_id: postId,
             position: position++,
             kind: "video",
             is_premium: premium,
-            bunny_video_id: auth.videoId,
+            bunny_video_id: videoId,
             thumb_key: thumbKey,
             duration_s: info?.durationS ?? null,
             width: info?.width ?? null,

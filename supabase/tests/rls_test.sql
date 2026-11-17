@@ -1101,6 +1101,41 @@ select t.ok((select count(*) from public.explore('all', 30, 0, 'all/ads')) = 0,
             'organic users never find ads-only posts by search');
 reset role;
 
+-- Trailers on Bunny: hidden until encoded, then same audience rule as legacy
+-- trailers (+ plan holders), checked by item id.
+update public.post_items
+   set trailer_bunny_video_id = '91000000-0000-0000-0000-000000000031', trailer_status = 'pending'
+ where id = '91000000-0000-0000-0000-000000000010';
+select t.ok(not (select has_trailer from public.post_items where id = '91000000-0000-0000-0000-000000000010'),
+            'a trailer still encoding is not offered');
+set role authenticated;
+select t.act_as('ads_user');
+select t.fails($$select public.bunny_trailer_path('91000000-0000-0000-0000-000000000010')$$,
+               'a trailer cannot be played before Bunny has finished encoding it');
+reset role;
+
+update public.post_items set trailer_status = 'ready' where id = '91000000-0000-0000-0000-000000000010';
+select t.ok((select has_trailer from public.post_items where id = '91000000-0000-0000-0000-000000000010'),
+            'an encoded Bunny trailer is offered');
+set role authenticated;
+select t.act_as('ads_user');
+select t.ok(public.bunny_trailer_path('91000000-0000-0000-0000-000000000010') = '91000000-0000-0000-0000-000000000031',
+            'ads users can play the trailer');
+select t.act_as('organic_user');  -- holds a plan
+select t.ok(public.bunny_trailer_path('91000000-0000-0000-0000-000000000010') = '91000000-0000-0000-0000-000000000031',
+            'plan holders can play the trailer');
+select t.act_as('owner');
+select t.ok(public.bunny_trailer_path('91000000-0000-0000-0000-000000000010') = '91000000-0000-0000-0000-000000000031',
+            'admins can play any trailer');
+select t.act_as('bunny_nonpremium_user');
+select t.fails($$select public.bunny_trailer_path('91000000-0000-0000-0000-000000000010')$$,
+               'an organic user with no plan and no ads access cannot play the trailer');
+select t.ok(not exists (select 1 from information_schema.column_privileges
+                         where table_name = 'post_items' and column_name = 'trailer_bunny_video_id'
+                           and grantee = 'authenticated' and privilege_type = 'SELECT'),
+            'the Bunny trailer id is not readable by app users');
+reset role;
+
 -- Free mode: no plans; ads users (and approved organic users) get full access,
 -- organic users ask for it; everyone logged in gets 15 GB of cloud.
 delete from public.subscriptions;

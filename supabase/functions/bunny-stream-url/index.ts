@@ -61,15 +61,22 @@ Deno.serve(async (req) => {
   if (userError || !userData.user) return json({ error: "not signed in" }, 401);
 
   let itemId: string;
+  let kind: string;
   try {
     const body = await req.json();
     itemId = String(body.item_id ?? "");
+    kind = body.kind === "trailer" ? "trailer" : "video";
   } catch {
     return json({ error: "invalid request body" }, 400);
   }
   if (!itemId) return json({ error: "item_id is required" }, 400);
 
-  const { data: videoId, error: rpcError } = await asUser.rpc("bunny_video_path", { p_item_id: itemId });
+  // The database decides who may watch: the full video follows the audience +
+  // premium rule, the trailer follows the (looser) trailer rule.
+  const { data: videoId, error: rpcError } = await asUser.rpc(
+    kind === "trailer" ? "bunny_trailer_path" : "bunny_video_path",
+    { p_item_id: itemId },
+  );
   if (rpcError) return json({ error: rpcError.message }, 403);
   if (!videoId) return json({ url: null });
 

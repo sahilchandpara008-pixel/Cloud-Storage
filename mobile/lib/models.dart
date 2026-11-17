@@ -107,6 +107,11 @@ class PostItem {
   final String? mediaKey;
   final String? thumbKey;
   final String? trailerKey;
+
+  /// The database's "has a playable trailer" flag. True for a trailer file in
+  /// Supabase Storage ([trailerKey]) and for a preview stored on Bunny, which
+  /// has no key the app can read.
+  final bool trailerReady;
   final int? durationS;
   final int position;
 
@@ -117,11 +122,15 @@ class PostItem {
     this.mediaKey,
     this.thumbKey,
     this.trailerKey,
+    this.trailerReady = false,
     this.durationS,
     this.position = 0,
   });
 
-  bool get hasTrailer => trailerKey != null;
+  bool get hasTrailer => trailerKey != null || trailerReady;
+
+  /// A preview streamed from Bunny (no readable key, see [trailerReady]).
+  bool get trailerOnBunny => trailerKey == null && trailerReady;
   bool get isVideo => kind == 'video';
   bool get isBunnyBacked => mediaKey == null;
   String? get thumbUrl => thumbKey == null ? null : Config.publicUrl(thumbKey!);
@@ -133,6 +142,7 @@ class PostItem {
     mediaKey: j['media_key'] as String?,
     thumbKey: j['thumb_key'] as String?,
     trailerKey: j['trailer_key'] as String?,
+    trailerReady: (j['has_trailer'] as bool?) ?? false,
     durationS: (j['duration_s'] as num?)?.toInt(),
     position: (j['position'] as num?)?.toInt() ?? 0,
   );
@@ -169,7 +179,7 @@ class Post {
   bool get hasPremium => items.any((i) => i.isPremium);
 
   static const select =
-      '*, channels(name, icon_url), post_items(id, kind, is_premium, media_key, thumb_key, trailer_key, duration_s, position)';
+      '*, channels(name, icon_url), post_items(id, kind, is_premium, media_key, thumb_key, trailer_key, has_trailer, duration_s, position)';
 
   factory Post.fromJson(Map<String, dynamic> j) {
     final ch = j['channels'] as Map<String, dynamic>?;

@@ -11,8 +11,13 @@ export type MediaInfo = {
   thumbnail: Blob;
 };
 
-function canvasToJpeg(source: CanvasImageSource, width: number, height: number): Promise<Blob> {
-  const scale = Math.min(1, THUMB_WIDTH / width);
+function canvasToJpeg(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  maxWidth = THUMB_WIDTH,
+): Promise<Blob> {
+  const scale = Math.min(1, maxWidth / width);
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(width * scale);
   canvas.height = Math.round(height * scale);
@@ -77,6 +82,30 @@ export function readMedia(file: File): Promise<MediaInfo> {
   if (file.type.startsWith("video/")) return readVideo(file);
   if (file.type.startsWith("image/")) return readImage(file);
   return Promise.reject(new Error(`${file.name} is not a video or image`));
+}
+
+// A hand-picked thumbnail: any picture the browser can open, re-encoded as a
+// JPEG no wider than [maxWidth] (bigger than the auto frame, since it's the
+// cover people see first).
+export function toJpegThumbnail(file: File, maxWidth = 960): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = async () => {
+      try {
+        resolve(await canvasToJpeg(img, img.naturalWidth, img.naturalHeight, maxWidth));
+      } catch (e) {
+        reject(e);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(`Can't read thumbnail ${file.name}`));
+    };
+    img.src = url;
+  });
 }
 
 export function extension(file: File) {

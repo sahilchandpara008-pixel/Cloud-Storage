@@ -136,7 +136,9 @@ Future<void> watchTrailer(
   await _play(
     context,
     post,
-    () => Backend.mediaUrl(item.trailerKey!),
+    () => item.trailerOnBunny
+        ? Backend.bunnyStreamUrl(item.id, trailer: true)
+        : Backend.mediaUrl(item.trailerKey!),
     true,
     'Trailer · ${post.title}',
     event: 'preview_view',
