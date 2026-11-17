@@ -11,7 +11,7 @@ import {
   extension,
   formatBytes,
   readMedia,
-  toJpegThumbnail,
+  prepareThumbnail,
   type MediaInfo,
 } from "@/lib/media";
 import { createClient } from "@/lib/supabase/browser";
@@ -347,15 +347,28 @@ export function ContentUploader({
         // Cover: the hand-picked picture, else a frame from the video (or the
         // image itself), else (browser couldn't decode it) Bunny's own frame is
         // saved later.
+        // A cover that can't be opened must never stop the upload itself.
         const id = crypto.randomUUID();
         let thumbKey: string | null = null;
-        const cover: Blob | null = r.thumb ? await toJpegThumbnail(r.thumb) : (info?.thumbnail ?? null);
+        let thumbNote = "";
+        let cover: { blob: Blob; contentType: string; ext: string } | null = info?.thumbnail
+          ? { blob: info.thumbnail, contentType: "image/jpeg", ext: "jpg" }
+          : null;
+        if (r.thumb) {
+          try {
+            cover = await prepareThumbnail(r.thumb);
+          } catch {
+            thumbNote = cover
+              ? " Your thumbnail couldn't be opened, so a frame from the video is used; change it on the post page."
+              : " Your thumbnail couldn't be opened; Bunny's frame is used. Change it on the post page.";
+          }
+        }
         if (cover) {
-          thumbKey = `thumbs/${post.id}/${id}.jpg`;
+          thumbKey = `thumbs/${post.id}/${id}.${cover.ext}`;
           update(i, { message: "Uploading thumbnail…" });
           const thumb = await supabase.storage
             .from("public")
-            .upload(thumbKey, cover, { contentType: "image/jpeg", upsert: false });
+            .upload(thumbKey, cover.blob, { contentType: cover.contentType, upsert: false });
           if (thumb.error) throw thumb.error;
         }
 
@@ -392,7 +405,7 @@ export function ContentUploader({
           if (error) throw error;
           pendingItemIds.push(item.id as string);
           okPostIds.push(post.id as string);
-          update(i, { state: "encoding", message: "Uploaded. Bunny is encoding it; it goes live automatically." });
+          update(i, { state: "encoding", message: "Uploaded. Bunny is encoding it; it goes live automatically." + thumbNote });
         } else {
           const mediaKey = `posts/${post.id}/${id}.${extension(file)}`;
           update(i, { message: "Uploading…" });
@@ -415,7 +428,7 @@ export function ContentUploader({
           });
           if (error) throw error;
           okPostIds.push(post.id as string);
-          update(i, { state: "done", message: undefined });
+          update(i, { state: "done", message: thumbNote.trim() || undefined });
         }
       } catch (e) {
         // Don't leave an empty post behind: it would show in the app with no media.
@@ -567,8 +580,17 @@ export function ContentUploader({
                     : "text-gray-500"
             }`}
           >
-            {r.state === "done" ? "Posted" : r.message}
+            {r.state === "done" ? `✓ Posted${r.message ? `. ${r.message}` : ""}` : r.message}
           </p>
+        )}
+        {r.state === "error" && !busy && (
+          <button
+            type="button"
+            onClick={() => update(i, { state: "waiting", message: undefined })}
+            className="mt-2 rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          >
+            ↻ Try again
+          </button>
         )}
       </li>
     );

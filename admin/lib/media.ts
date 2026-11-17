@@ -117,3 +117,45 @@ export function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
+
+export type PreparedThumbnail = { blob: Blob; contentType: string; ext: string };
+
+// What kind of picture the bytes really are (the file name and the browser's
+// guess can be wrong: covers saved from websites are often WebP or AVIF with
+// a .jpg name).
+async function sniffImage(file: File): Promise<{ contentType: string; ext: string } | null> {
+  const b = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+  const ascii = (from: number, to: number) => String.fromCharCode(...b.slice(from, to));
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { contentType: "image/jpeg", ext: "jpg" };
+  if (b[0] === 0x89 && ascii(1, 4) === "PNG") return { contentType: "image/png", ext: "png" };
+  if (ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return { contentType: "image/webp", ext: "webp" };
+  if (ascii(0, 3) === "GIF") return { contentType: "image/gif", ext: "gif" };
+  return null;
+}
+
+// A hand-picked thumbnail, made as dependable as possible:
+//   1. decode it (createImageBitmap, then <img>) and re-encode as JPEG;
+//   2. if this browser can't decode it but the bytes are a normal JPEG / PNG /
+//      WebP / GIF, use the file exactly as it is;
+//   3. otherwise give up (the caller falls back to a frame from the video).
+export async function prepareThumbnail(file: File, maxWidth = 960): Promise<PreparedThumbnail> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    try {
+      const blob = await canvasToJpeg(bitmap, bitmap.width, bitmap.height, maxWidth);
+      return { blob, contentType: "image/jpeg", ext: "jpg" };
+    } finally {
+      bitmap.close();
+    }
+  } catch {
+    // try the next way
+  }
+  try {
+    return { blob: await toJpegThumbnail(file, maxWidth), contentType: "image/jpeg", ext: "jpg" };
+  } catch {
+    // try the next way
+  }
+  const kind = await sniffImage(file);
+  if (kind) return { blob: file, ...kind };
+  throw new Error(`Can't open the picture ${file.name}. Save it again as JPG or PNG and pick it again.`);
+}

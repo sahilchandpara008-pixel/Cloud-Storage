@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MAX_THUMBNAIL_BYTES } from "@/lib/bunny-upload";
-import { toJpegThumbnail } from "@/lib/media";
+import { prepareThumbnail } from "@/lib/media";
 import { createClient } from "@/lib/supabase/browser";
 import { smallAction } from "./ui";
 
@@ -33,9 +33,11 @@ export function ThumbnailUpload({
     const supabase = createClient();
     try {
       setStatus("Uploading…");
-      const jpeg = await toJpegThumbnail(file);
-      const key = `thumbs/${postId}/${crypto.randomUUID()}.jpg`;
-      const up = await supabase.storage.from("public").upload(key, jpeg, { contentType: "image/jpeg", upsert: false });
+      const cover = await prepareThumbnail(file);
+      const key = `thumbs/${postId}/${crypto.randomUUID()}.${cover.ext}`;
+      const up = await supabase.storage
+        .from("public")
+        .upload(key, cover.blob, { contentType: cover.contentType, upsert: false });
       if (up.error) throw up.error;
       const { error } = await supabase.from("post_items").update({ thumb_key: key }).eq("id", itemId);
       if (error) throw error;
