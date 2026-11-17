@@ -114,7 +114,8 @@ export function ContentUploader({
   const router = useRouter();
   const single = mode === "single";
   const [channelId, setChannelId] = useState(
-    channels.some((c) => c.id === initialChannelId) ? (initialChannelId as string) : (channels[0]?.id ?? ""),
+    // No silent default: an upload must go into the channel the admin picked.
+    channels.some((c) => c.id === initialChannelId) ? (initialChannelId as string) : channels.length === 1 ? channels[0].id : "",
   );
   const [folderId, setFolderId] = useState("");
   const [audience, setAudience] = useState("all");
@@ -242,6 +243,10 @@ export function ContentUploader({
   async function run() {
     setFormError(null);
     setSummary(null);
+    if (!channelId) {
+      setFormError("Choose the channel to upload into.");
+      return;
+    }
     // "Publish at" is a time the admin typed, not this computer's clock.
     let scheduledAt: string | null = null;
     if (publishMode === "schedule") {
@@ -532,8 +537,20 @@ export function ContentUploader({
   return (
     <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Channel">
+        <Field
+          label="Channel"
+          hint={
+            !channel
+              ? "Pick where this goes. Ads-only channels are seen only by people who came from your ads."
+              : channel.audience === "ads"
+                ? "Ads-only channel: only people who installed from your Meta ads will see these posts."
+                : channel.audience === "organic"
+                  ? "Organic-only channel: people from your ads won't see these posts."
+                  : "Everyone can see this channel."
+          }
+        >
           <Select value={channelId} onChange={(e) => setChannelId(e.target.value)} disabled={busy}>
+            {!channelId && <option value="">Choose a channel…</option>}
             {channels.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
