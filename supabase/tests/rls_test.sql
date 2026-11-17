@@ -161,6 +161,37 @@ select public.record_install('30000000-0000-0000-0000-000000000050', 'ok', 'utm_
 select t.ok((select source from public.installs where install_id = '30000000-0000-0000-0000-000000000050') = 'meta',
             'failed read is replaced by the first successful one, which is then kept');
 
+-- Referrer retry: a Play install whose first referrer read failed becomes an
+-- ads user when the app retries the SAME install and gets the ad referrer.
+insert into t.ids values ('retry_guest', '00000000-0000-0000-0000-0000000000a1'),
+                         ('retry_other', '00000000-0000-0000-0000-0000000000a2');
+insert into auth.users (id, email, is_anonymous) values
+  (t.id('retry_guest'), null, true), (t.id('retry_other'), null, true);
+set role authenticated;
+select t.act_as('retry_guest');
+select public.record_install('30000000-0000-0000-0000-0000000000a1', 'not_available');
+select t.ok(public.user_source() = 'organic', 'retry: failed first read -> organic for now');
+select public.record_install('30000000-0000-0000-0000-0000000000a1', 'ok',
+       'utm_source=meta&utm_medium=paid_social&utm_campaign=c1');
+select t.ok(public.user_source() = 'ads', 'retry: same install, successful read -> ads user');
+select public.record_install('30000000-0000-0000-0000-0000000000a1', 'ok', 'utm_source=google-play&utm_medium=organic');
+select t.ok(public.user_source() = 'ads', 'retry: the first successful read is kept');
+-- A different install never upgrades an organic first touch.
+select t.act_as('retry_other');
+select public.record_install('30000000-0000-0000-0000-0000000000a2', 'not_available');
+select public.record_install('30000000-0000-0000-0000-0000000000a3', 'ok', 'utm_source=meta');
+select t.ok(public.user_source() = 'organic', 'retry: another install cannot change the first touch');
+reset role;
+select t.ok((select first_touch_campaign from public.user_attribution where user_id = t.id('retry_guest')) = 'c1',
+            'retry: campaign carried into first touch');
+select t.fails($$update public.user_attribution set first_touch_source = 'meta'
+                  where user_id = t.id('retry_other')$$,
+               'retry: a direct update of a failed-read first touch is still refused');
+-- Keep the user counts below unchanged.
+delete from auth.users where id in (t.id('retry_guest'), t.id('retry_other'));
+delete from public.installs where install_id in ('30000000-0000-0000-0000-0000000000a1',
+  '30000000-0000-0000-0000-0000000000a2', '30000000-0000-0000-0000-0000000000a3');
+
 -- ---------------------------------------------------------------------------
 -- Visibility (tests 1, 4, 5)
 -- ---------------------------------------------------------------------------

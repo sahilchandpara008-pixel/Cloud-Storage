@@ -110,26 +110,35 @@ class AppState extends ChangeNotifier {
   /// (e.g. ...&referrer=utm_source%3Dmeta%26utm_campaign%3D...) -- so a Play
   /// Store install can be credited to the ad that led to it, not just a
   /// direct-APK download.
+  /// A Play Store referrer read can fail on the first launch (Play services
+  /// not ready). Recording that as "no referrer" for good turned real ad
+  /// installs into organic users, so a failed read is retried: a few times
+  /// now, then again on later launches until Google answers. The server keeps
+  /// the first successful read for this install and upgrades its user.
   Future<void> _recordInstall() async {
     if (_prefs.getBool('install_recorded') == true) return;
 
-    String status;
+    String status = 'not_available';
     String? referrer;
     DateTime? clickTs;
 
     if (PlayBilling.isPlayBuild) {
-      try {
-        // Throws if Play Services is unavailable; otherwise this is Google's
-        // real click referrer, not a guess.
-        final details = await PlayInstallReferrer.installReferrer;
-        status = 'ok';
-        referrer = details.installReferrer;
-        final seconds = details.referrerClickTimestampSeconds;
-        if (seconds > 0) {
-          clickTs = DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
+      for (var attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await Future<void>.delayed(const Duration(seconds: 2));
+        try {
+          // Throws if Play Services is unavailable; otherwise this is Google's
+          // real click referrer, not a guess.
+          final details = await PlayInstallReferrer.installReferrer;
+          status = 'ok';
+          referrer = details.installReferrer;
+          final seconds = details.referrerClickTimestampSeconds;
+          if (seconds > 0) {
+            clickTs = DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
+          }
+          break;
+        } catch (_) {
+          status = 'not_available';
         }
-      } catch (_) {
-        status = 'not_available';
       }
     } else {
       final hasReferrer = Config.apkReferrer.isNotEmpty;
@@ -138,8 +147,15 @@ class AppState extends ChangeNotifier {
     }
 
     final source = await Backend.recordInstall(installId, status, referrer, clickTs: clickTs);
-    await _prefs.setBool('install_recorded', true);
     await _prefs.setString('install_source', source ?? 'unknown');
+
+    // Done unless a Play build still couldn't read the referrer; then try
+    // again on the next launches (Google keeps it for 90 days).
+    final tries = (_prefs.getInt('referrer_tries') ?? 0) + 1;
+    await _prefs.setInt('referrer_tries', tries);
+    if (status != 'not_available' || !PlayBilling.isPlayBuild || tries >= 20) {
+      await _prefs.setBool('install_recorded', true);
+    }
   }
 
   Future<void> refreshStatus() async {
