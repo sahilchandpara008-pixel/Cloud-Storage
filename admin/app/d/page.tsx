@@ -23,8 +23,8 @@ export async function generateMetadata(): Promise<Metadata> {
 const FEATURES = [
   ["🎬", "Full videos", "Watch full shows and videos from top creators."],
   ["▶️", "Free trailers", "Preview videos with a free trailer."],
-  ["☁️", "15 GB cloud storage", "Keep your photos, videos and files safe."],
-  ["🆓", "Completely free", "No plans and no payments. Just log in."],
+  ["☁️", "Cloud storage", "Keep your photos, videos and files safe in the cloud."],
+  ["🔑", "Easy start", "Jump in as a guest, or log in with Google or email."],
 ];
 
 export default async function DownloadPage() {
@@ -57,7 +57,7 @@ export default async function DownloadPage() {
 
         <div className="mt-8">
           <DownloadButton apkUrl={c.apk_url} />
-          <p className="mt-3 text-center text-xs text-white/50">Free download · Android · About 25 MB</p>
+          <p className="mt-3 text-center text-xs text-white/50">Free download · Android</p>
         </div>
 
         <ul className="mt-10 space-y-3">
