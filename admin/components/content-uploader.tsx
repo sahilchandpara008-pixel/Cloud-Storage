@@ -69,7 +69,7 @@ function Slot({
         </div>
       ) : (
         <label
-          className={`mt-1 inline-block rounded-md border border-gray-300 bg-white px-2.5 py-1 font-medium text-red-700 ${
+          className={`mt-1 inline-block rounded-md border border-gray-300 bg-white px-2.5 py-1 font-medium text-brand-700 ${
             disabled ? "opacity-50" : "cursor-pointer hover:bg-gray-100"
           }`}
         >
@@ -676,7 +676,7 @@ export function ContentUploader({
           checked={premium}
           onChange={(e) => setPremium(e.target.checked)}
           disabled={busy}
-          className="h-4 w-4 accent-red-700"
+          className="h-4 w-4 accent-brand-700"
         />
         👑 Premium: a plan is needed to play the full video (untick to make it free for everyone)
       </label>
@@ -751,7 +751,7 @@ export function ContentUploader({
       ) : (
         <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
           <label className="block cursor-pointer text-center text-sm text-gray-600">
-            <span className="font-medium text-red-700">Choose many videos or images at once</span>
+            <span className="font-medium text-brand-700">Choose many videos or images at once</span>
             <span className="block text-xs text-gray-500">
               Each file becomes its own post, with its own title, preview and thumbnail boxes below. Videos and
               previews stream from Bunny (up to 2 GB each) · JPG/PNG images up to 50 MB
@@ -775,7 +775,7 @@ export function ContentUploader({
             type="button"
             onClick={addBlank}
             disabled={busy}
-            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-700 hover:border-red-400 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-brand-200 bg-white px-4 py-3 text-sm font-medium text-brand-700 hover:border-brand-400 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="text-lg leading-none">+</span>
             {rows.length === 0 ? "Add content one by one" : "Add another content"}

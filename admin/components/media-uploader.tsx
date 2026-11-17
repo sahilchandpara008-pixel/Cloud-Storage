@@ -136,7 +136,7 @@ export function MediaUploader({
   return (
     <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
       <label className="block cursor-pointer text-center text-sm text-gray-600">
-        <span className="font-medium text-red-700">+ Add more videos or images to this post</span>
+        <span className="font-medium text-brand-700">+ Add more videos or images to this post</span>
         <span className="block text-xs text-gray-500">
           Videos stream from Bunny (up to 2 GB) · JPG/PNG images up to 50 MB. The thumbnail is taken from the video;
           use the buttons on each item to change it or add a preview.
@@ -175,7 +175,7 @@ export function MediaUploader({
               type="checkbox"
               checked={premium}
               onChange={(e) => setPremium(e.target.checked)}
-              className="h-4 w-4 accent-red-700"
+              className="h-4 w-4 accent-brand-700"
             />
             Mark as 👑 premium
           </label>

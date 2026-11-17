@@ -104,7 +104,7 @@ export default async function ChannelPage({
                   <Button variant="secondary" type="submit">Save</Button>
                 </form>
                 <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                  <Link href={`/posts?channel=${id}&folder=${f.id}`} className="hover:text-red-700">
+                  <Link href={`/posts?channel=${id}&folder=${f.id}`} className="hover:text-brand-700">
                     {f.posts[0]?.count ?? 0} posts
                   </Link>
                   <form action={deleteFolder.bind(null, id, f.id)}>

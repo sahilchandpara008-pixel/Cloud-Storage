@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Button, Empty, Flash, PageHeader, Table, Td, Th } from "@/components/ui";
+import { Button, Empty, Flash, PageHeader, SegmentTabs, Table, Td, Th } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import type { AppUser } from "@/lib/users";
@@ -31,23 +30,21 @@ export default async function ApprovalsPage({
       />
       <Flash ok={sp.ok} error={sp.error} />
 
-      <div className="mb-4 flex gap-2">
-        {tabs.map((t) => (
-          <Link
-            key={t.value}
-            href={`/approvals?tab=${t.value}`}
-            className={`rounded-full px-3 py-1 text-sm ${
-              tab === t.value ? "bg-red-700 text-white" : "bg-white text-gray-700 ring-1 ring-gray-300"
-            }`}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </div>
+      <SegmentTabs
+        className="mb-4"
+        items={tabs.map((t) => ({ href: `/approvals?tab=${t.value}`, label: t.label, active: tab === t.value }))}
+      />
 
       {users.length === 0 ? (
-        <Empty>
-          {tab === "pending" ? "Nobody is waiting for approval." : `No ${tab} users.`}
+        <Empty icon="✓">
+          {tab === "pending" ? (
+            <>
+              <span className="block font-medium text-gray-800">You&apos;re all caught up</span>
+              Nobody is waiting for approval. Organic users who buy a plan appear here.
+            </>
+          ) : (
+            `No ${tab} users.`
+          )}
         </Empty>
       ) : (
         <Table>

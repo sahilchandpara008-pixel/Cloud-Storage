@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+/* Flixvault brand (same orange as the app: #FF7A1A, dark #E25A00).
+   700 is the accent on white (buttons, links): dark enough for white text.
+   Red stays for destructive actions and errors only. */
+@theme {
+  --color-brand-50: #fff5ed;
+  --color-brand-100: #ffe7d4;
+  --color-brand-200: #ffcaa5;
+  --color-brand-300: #ffa66b;
+  --color-brand-400: #ff8a3d;
+  --color-brand-500: #ff7a1a;
+  --color-brand-600: #e25a00;
+  --color-brand-700: #b84a00;
+  --color-brand-800: #933c05;
+  --color-brand-900: #77320a;
+  --color-ink-900: #0b0b0d;
+  --color-ink-800: #16161a;
+  --color-ink-700: #1f1f25;
+  --color-ink-600: #2a2a31;
+}
+
 /* Admin design tokens (matched to the Vayora admin's source): gray-50 page,
    gray-900 text, red-700 accent, system UI font. */
 :root {
@@ -29,14 +49,14 @@ button:disabled {
   cursor: not-allowed;
 }
 input[type="checkbox"] {
-  accent-color: #b91c1c;
+  accent-color: #b84a00;
 }
 summary {
   cursor: pointer;
 }
 ::selection {
-  background: #fee2e2;
-  color: #991b1b;
+  background: #ffe7d4;
+  color: #933c05;
 }
 main {
   min-width: 0;
@@ -47,7 +67,7 @@ textarea {
 
 /* Visible keyboard focus everywhere, without a ring on mouse clicks. */
 :focus-visible {
-  outline: 2px solid #dc2626;
+  outline: 2px solid #e25a00;
   outline-offset: 2px;
 }
 
@@ -60,4 +80,19 @@ textarea {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Toast pop-up: slides in from above. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.toast-in {
+  animation: toast-in 0.18s ease-out;
 }

@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { Badge, Button, Card, Empty, Flash, Input, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, Empty, Flash, Input, PageHeader, SegmentTabs } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { closeRequest, deleteRequestedAccount } from "./actions";
@@ -39,14 +38,13 @@ export default async function RequestsPage({
         subtitle="Account deletion requests and content / copyright reports from the website."
       />
       <Flash ok={sp.ok} error={sp.error ?? error?.message} />
-      <div className="mb-4 flex gap-2">
-        {[["open", "Open"], ["closed", "Closed"]].map(([v, l]) => (
-          <Link key={v} href={`/requests?status=${v}`}
-            className={`rounded-full px-3 py-1 text-sm font-medium ring-1 ${v === status ? "bg-red-700 text-white ring-red-700" : "bg-white text-gray-700 ring-gray-300"}`}>
-            {l}
-          </Link>
-        ))}
-      </div>
+      <SegmentTabs
+        className="mb-4"
+        items={[
+          ["open", "Open"],
+          ["closed", "Closed"],
+        ].map(([v, l]) => ({ href: `/requests?status=${v}`, label: l, active: v === status }))}
+      />
       <Card className="mb-4 text-sm text-gray-600">
         <b>Delete account:</b> press <b>Delete this account now</b> (removes the account, its cloud files and data),
         then reply to the user by email. We promise deletion within 7 days.{" "}

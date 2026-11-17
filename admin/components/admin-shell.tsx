@@ -1,14 +1,18 @@
 import type { ReactNode } from "react";
 import { Breadcrumb, Nav, type NavGroup } from "@/components/nav";
-import { Button } from "@/components/ui";
+
+// Small outlined button for the dark sidebar.
+const darkButton =
+  "rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-gray-200 transition-colors hover:border-white/30 hover:bg-white/5 hover:text-white";
 
 function Logo() {
   return (
-    <span className="flex items-center gap-3 font-semibold tracking-tight text-gray-900">
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-red-700 text-sm font-bold text-white">FV</span>
+    <span className="flex items-center gap-3 font-semibold tracking-tight text-white">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/site/logo.png" alt="" width={36} height={36} className="h-9 w-9 rounded-xl" />
       <span>
         Flixvault
-        <span className="block text-[10px] font-medium uppercase tracking-[.2em] text-gray-400">Admin</span>
+        <span className="block text-[10px] font-medium uppercase tracking-[.2em] text-brand-400">Admin</span>
       </span>
     </span>
   );
@@ -31,25 +35,25 @@ export function AdminShell({
 }) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <aside className="border-b border-gray-200 bg-white md:fixed md:inset-y-0 md:left-0 md:z-20 md:flex md:w-60 md:flex-col md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between gap-3 px-4 py-4 md:border-b md:border-gray-100 md:px-6 md:py-5">
+      <aside className="bg-ink-900 md:fixed md:inset-y-0 md:left-0 md:z-20 md:flex md:w-60 md:flex-col">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 md:border-b md:border-white/10 md:px-5 md:py-4">
           <Logo />
           <form action={signOut} className="md:hidden">
-            <Button variant="secondary">Sign out</Button>
+            <button className={darkButton}>Sign out</button>
           </form>
         </div>
-        <div className="md:flex-1 md:overflow-y-auto md:pt-6">
+        <div className="md:flex-1 md:overflow-y-auto md:pt-4">
           <Nav groups={groups} />
         </div>
-        <div className="hidden border-t border-gray-100 p-5 md:block">
-          <p className="truncate text-xs font-medium text-gray-700" title={email}>
-            {email}
-          </p>
-          <p className="mt-1 mb-4 text-xs text-gray-400">{isOwner ? "Owner" : "Content admin"}</p>
+        <div className="hidden items-center gap-3 border-t border-white/10 px-4 py-3 md:flex">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-medium text-gray-200" title={email}>
+              {email}
+            </p>
+            <p className="text-[11px] text-gray-500">{isOwner ? "Owner" : "Content admin"}</p>
+          </div>
           <form action={signOut}>
-            <Button variant="secondary" className="w-full">
-              Sign out
-            </Button>
+            <button className={darkButton}>Sign out</button>
           </form>
         </div>
       </aside>

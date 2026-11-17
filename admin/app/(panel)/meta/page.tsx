@@ -134,7 +134,7 @@ export default async function MetaPage({
           <div>
             <p className="mb-1 font-medium">Download page (open it to check)</p>
             <div className="flex flex-wrap items-center gap-2">
-              <a href="/d" target="_blank" className="break-all font-mono text-xs text-red-700 underline">{downloadPage}</a>
+              <a href="/d" target="_blank" className="break-all font-mono text-xs text-brand-700 underline">{downloadPage}</a>
               <CopyButton text={downloadPage} />
             </div>
           </div>

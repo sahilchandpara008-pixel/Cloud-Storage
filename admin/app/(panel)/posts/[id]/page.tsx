@@ -41,7 +41,7 @@ export default async function PostPage({
 
   return (
     <>
-      <Link href={`/posts?channel=${post.channel_id}`} className="mb-2 inline-block text-sm text-gray-500 hover:text-red-700">
+      <Link href={`/posts?channel=${post.channel_id}`} className="mb-2 inline-block text-sm text-gray-500 hover:text-brand-700">
         ← {post.channels?.name ?? "Posts"}
       </Link>
       <PageHeader title={post.title} subtitle={`${post.view_count} views`} />

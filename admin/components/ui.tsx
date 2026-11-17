@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { ComponentProps, ReactNode } from "react";
+import { Suspense, type ComponentProps, type ReactNode } from "react";
+import { Toast } from "./toast";
 
 export function PageHeader({
   title,
@@ -31,21 +32,19 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
   );
 }
 
+// After an action: a pop-up in the corner (see Toast) saying it worked or
+// what went wrong.
 export function Flash({ ok, error }: { ok?: string; error?: string }) {
   if (!ok && !error) return null;
-  return error ? (
-    <p role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-      {error}
-    </p>
-  ) : (
-    <p role="status" className="mb-6 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-      {ok}
-    </p>
+  return (
+    <Suspense fallback={null}>
+      <Toast ok={ok} error={error} />
+    </Suspense>
   );
 }
 
 const buttonStyles = {
-  primary: "bg-red-700 text-white hover:bg-red-800",
+  primary: "bg-brand-700 text-white hover:bg-brand-800",
   secondary: "bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50",
   danger: "bg-white text-red-700 ring-1 ring-red-300 hover:bg-red-50",
   success: "bg-green-700 text-white hover:bg-green-800",
@@ -54,7 +53,7 @@ const buttonStyles = {
 type Variant = keyof typeof buttonStyles;
 
 const buttonBase =
-  "inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex min-h-9 items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed disabled:opacity-50";
 
 export function Button({
   variant = "primary",
@@ -101,7 +100,7 @@ export function Field({
 }
 
 const inputClass =
-  "block w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none placeholder:text-gray-400 focus:border-red-600 focus:ring-1 focus:ring-red-600 disabled:bg-gray-50 disabled:text-gray-500";
+  "block w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none placeholder:text-gray-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 disabled:bg-gray-50 disabled:text-gray-500";
 
 export function Input({ className = "", ...props }: ComponentProps<"input">) {
   return <input className={`${inputClass} ${className}`} {...props} />;
@@ -189,11 +188,46 @@ export function Td({ children, className = "" }: { children?: ReactNode; classNa
   return <td className={`px-4 py-3 align-middle text-gray-700 ${className}`}>{children}</td>;
 }
 
-export function Empty({ children }: { children: ReactNode }) {
+export function Empty({ children, icon = "○" }: { children: ReactNode; icon?: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center text-sm text-gray-500">
-      {children}
+    <div className="flex flex-col items-center rounded-xl border border-gray-200 bg-white px-6 py-10 text-center shadow-sm">
+      <span
+        aria-hidden="true"
+        className="mb-3 grid h-11 w-11 place-items-center rounded-full bg-brand-50 text-lg text-brand-600"
+      >
+        {icon}
+      </span>
+      <div className="max-w-sm text-sm leading-6 text-gray-500">{children}</div>
     </div>
+  );
+}
+
+// Segmented filter tabs (links, so the filter stays in the URL).
+export function SegmentTabs({
+  items,
+  className = "",
+}: {
+  items: { href: string; label: ReactNode; active: boolean }[];
+  className?: string;
+}) {
+  return (
+    <nav
+      aria-label="Filter"
+      className={`inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-gray-200 bg-gray-100/70 p-1 ${className}`}
+    >
+      {items.map((t) => (
+        <Link
+          key={t.href}
+          href={t.href}
+          aria-current={t.active ? "page" : undefined}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            t.active ? "bg-white text-brand-800 shadow-sm ring-1 ring-gray-200" : "text-gray-600 hover:bg-white/70 hover:text-gray-900"
+          }`}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
@@ -208,27 +242,47 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
 }
 
 // A metric tile. href makes it a shortcut to the matching filtered page.
+const statTones = {
+  brand: "bg-brand-50 text-brand-700",
+  purple: "bg-purple-50 text-purple-700",
+  blue: "bg-blue-50 text-blue-700",
+  green: "bg-green-50 text-green-700",
+  amber: "bg-amber-50 text-amber-700",
+  gray: "bg-gray-100 text-gray-700",
+};
+
 export function Stat({
   label,
   value,
   hint,
   href,
+  icon,
+  tone = "brand",
 }: {
   label: string;
   value: ReactNode;
-  hint?: string;
+  hint?: ReactNode;
   href?: string;
+  icon?: string;
+  tone?: keyof typeof statTones;
 }) {
   const body = (
     <>
-      <p className="text-xs font-medium text-gray-500">{label}</p>
-      <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-gray-900">{value}</p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-xs font-medium text-gray-500">{label}</p>
+        {icon && (
+          <span aria-hidden="true" className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-sm ${statTones[tone]}`}>
+            {icon}
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-gray-900">{value}</p>
       {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
     </>
   );
-  const cls = "block min-w-0 rounded-xl border border-gray-200 bg-white p-5 shadow-sm";
+  const cls = "block min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm";
   return href ? (
-    <Link href={href} className={`${cls} transition-colors hover:border-red-200 hover:bg-red-50/40`}>
+    <Link href={href} className={`${cls} transition-colors hover:border-brand-200 hover:bg-brand-50/40`}>
       {body}
     </Link>
   ) : (
@@ -253,7 +307,7 @@ export function Notice({
       href={href}
       className={`flex flex-wrap items-center justify-between gap-3 rounded-xl px-5 py-4 text-sm shadow-sm transition-colors ${
         tone === "red"
-          ? "bg-red-700 text-white hover:bg-red-800"
+          ? "bg-brand-700 text-white hover:bg-brand-800"
           : "border border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100"
       }`}
     >

@@ -27,7 +27,7 @@ export function UploadTabs({
       onClick={() => setMode(value)}
       className={`flex-1 rounded-lg border px-4 py-2.5 text-left text-sm transition ${
         mode === value
-          ? "border-red-700 bg-red-50 text-red-800"
+          ? "border-brand-700 bg-brand-50 text-brand-800"
           : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50"
       }`}
     >

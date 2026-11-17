@@ -92,7 +92,7 @@ export default async function AdminsPage({
               <div className="max-h-40 space-y-1 overflow-y-auto">
                 {(channels ?? []).map((c) => (
                   <label key={c.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="channels" value={c.id} className="h-4 w-4 accent-red-700" />
+                    <input type="checkbox" name="channels" value={c.id} className="h-4 w-4 accent-brand-700" />
                     {c.name}
                   </label>
                 ))}

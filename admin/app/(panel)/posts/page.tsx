@@ -131,7 +131,7 @@ export default async function PostsPage({
               return (
                 <tr key={p.id} className="hover:bg-gray-50">
                   <Td>
-                    <Link href={`/posts/${p.id}`} className="flex items-center gap-3 font-medium text-gray-900 hover:text-red-700">
+                    <Link href={`/posts/${p.id}`} className="flex items-center gap-3 font-medium text-gray-900 hover:text-brand-700">
                       {thumb ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img

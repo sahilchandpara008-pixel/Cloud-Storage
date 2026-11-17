@@ -1,5 +1,19 @@
 import Link from "next/link";
-import { Badge, Button, Card, Empty, Flash, Input, PageHeader, Select, SourceBadge, Table, Td, Th } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Empty,
+  Flash,
+  Input,
+  PageHeader,
+  SegmentTabs,
+  Select,
+  SourceBadge,
+  Table,
+  Td,
+  Th,
+} from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { markPaid, revokePayment, savePlay, saveSettings } from "./actions";
@@ -153,19 +167,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const plans = (planRows ?? []) as { id: string; name: string; price_inr: number }[];
 
   const tabs = (
-    <div className="mb-5 flex flex-wrap gap-2 border-b border-gray-200 pb-3">
-      {views.map((v) => (
-        <Link
-          key={v.value}
-          href={query({}, { view: v.value })}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-            v.value === view ? "bg-gray-900 text-white" : "bg-white text-gray-700 ring-1 ring-gray-300"
-          }`}
-        >
-          {v.label}
-        </Link>
-      ))}
-    </div>
+    <SegmentTabs
+      className="mb-5"
+      items={views.map((v) => ({ href: query({}, { view: v.value }), label: v.label, active: v.value === view }))}
+    />
   );
 
   const dateInputs = (
@@ -257,7 +262,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                 <Td className="whitespace-nowrap text-xs">{formatDate(r.last_purchase_at)}</Td>
                 <Td>
                   <Link
-                    className="text-sm text-red-700 underline"
+                    className="text-sm text-brand-700 underline"
                     href={query({}, { view: "orders", status: "success", plan: r.plan_id, from: sp.from, to: sp.to })}
                   >
                     View orders
@@ -285,19 +290,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     ];
     body = (
       <>
-        <div className="mb-3 flex flex-wrap gap-2">
-          {minFilters.map((f) => (
-            <Link
-              key={f.value}
-              href={query({}, { view: "buyers", min: f.value, q: sp.q })}
-              className={`rounded-full px-3 py-1 text-sm font-medium ring-1 ${
-                f.value === min ? "bg-red-700 text-white ring-red-700" : "bg-white text-gray-700 ring-gray-300"
-              }`}
-            >
-              {f.label}
-            </Link>
-          ))}
-        </div>
+        <SegmentTabs
+          className="mb-3"
+          items={minFilters.map((f) => ({
+            href: query({}, { view: "buyers", min: f.value, q: sp.q }),
+            label: f.label,
+            active: f.value === min,
+          }))}
+        />
         <form className="mb-4 flex flex-wrap items-end gap-3">
           <input type="hidden" name="view" value="buyers" />
           <input type="hidden" name="min" value={min} />
@@ -349,10 +349,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   <p>Last purchase: {formatDate(b.last_purchase_at)}</p>
                 </div>
                 <details className="mt-3" open={b.purchases > 1}>
-                  <summary className="cursor-pointer text-sm font-medium text-red-700">
+                  <summary className="cursor-pointer text-sm font-medium text-brand-700">
                     Purchase history ({b.history.length})
                   </summary>
-                  <ol className="mt-2 space-y-1 border-l-2 border-red-200 pl-4">
+                  <ol className="mt-2 space-y-1 border-l-2 border-brand-200 pl-4">
                     {b.history.map((h, i) => (
                       <li key={h.reference} className="text-sm">
                         <span className="font-semibold">#{i + 1}</span> · {formatDate(h.at)} · <b>{h.plan}</b> · ₹
@@ -400,19 +400,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     const approved = orders.filter((o) => o.status === "approved");
     body = (
       <>
-        <div className="mb-3 flex flex-wrap gap-2">
-          {filters.map((f) => (
-            <Link
-              key={f.value}
-              href={query(sp, { status: f.value })}
-              className={`rounded-full px-3 py-1 text-sm font-medium ring-1 ${
-                f.value === status ? "bg-red-700 text-white ring-red-700" : "bg-white text-gray-700 ring-gray-300"
-              }`}
-            >
-              {f.label}
-            </Link>
-          ))}
-        </div>
+        <SegmentTabs
+          className="mb-3"
+          items={filters.map((f) => ({ href: query(sp, { status: f.value }), label: f.label, active: f.value === status }))}
+        />
         <form className="mb-3 flex flex-wrap items-end gap-3">
           <input type="hidden" name="view" value="orders" />
           <input type="hidden" name="status" value={status} />
@@ -447,7 +438,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         {user && (
           <p className="mb-3 text-sm">
             Showing orders of <b>{orders[0]?.email ?? "this user"}</b> ·{" "}
-            <Link href={query(sp, { user: undefined })} className="text-red-700 underline">
+            <Link href={query(sp, { user: undefined })} className="text-brand-700 underline">
               show everyone
             </Link>
           </p>
@@ -479,8 +470,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
               return (
                 <tr key={o.id} className={open && o.upi_response ? "bg-amber-50/60" : ""}>
                   <Td>
-                    <p className="font-mono text-xs font-semibold">{o.reference}</p>
-                    <p className="font-mono text-[10px] text-gray-400">{o.id}</p>
+                    <p className="font-mono text-xs font-semibold" title={`Order id ${o.id}`}>
+                      {o.reference}
+                    </p>
                   </Td>
                   <Td>
                     <p className="font-medium">{o.display_name ?? "—"}</p>
@@ -517,7 +509,10 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                   </Td>
                   <Td>
                     {o.upi_response ? (
-                      <code className="block max-w-64 break-all text-[11px] text-gray-700">{o.upi_response}</code>
+                      <details>
+                        <summary className="text-xs font-medium text-brand-700">Show</summary>
+                        <code className="mt-1 block max-w-64 break-all text-[11px] text-gray-700">{o.upi_response}</code>
+                      </details>
                     ) : (
                       <span className="text-xs text-gray-400">none yet</span>
                     )}

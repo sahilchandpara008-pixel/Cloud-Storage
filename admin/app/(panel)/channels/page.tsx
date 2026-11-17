@@ -11,6 +11,7 @@ import {
   StatusBadge,
   Table,
   Td,
+  SegmentTabs,
   Th,
 } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
@@ -128,19 +129,14 @@ export default async function ChannelsPage({
         </section>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {filters.map((f) => (
-          <Link
-            key={f.value}
-            href={f.value ? `/channels?audience=${f.value}` : "/channels"}
-            className={`rounded-full px-3 py-1 text-sm ${
-              (audience ?? "") === f.value ? "bg-red-700 text-white" : "bg-white text-gray-700 ring-1 ring-gray-300"
-            }`}
-          >
-            {f.label}
-          </Link>
-        ))}
-      </div>
+      <SegmentTabs
+        className="mb-4"
+        items={filters.map((f) => ({
+          href: f.value ? `/channels?audience=${f.value}` : "/channels",
+          label: f.label,
+          active: (audience ?? "") === f.value,
+        }))}
+      />
 
       {rows.length === 0 ? (
         <Empty>No channels yet. Create your first channel to start posting.</Empty>
@@ -161,7 +157,7 @@ export default async function ChannelsPage({
             {rows.map((c) => (
               <tr key={c.id} className="hover:bg-gray-50">
                 <Td>
-                  <Link href={`/channels/${c.id}`} className="font-medium text-gray-900 hover:text-red-700">
+                  <Link href={`/channels/${c.id}`} className="font-medium text-gray-900 hover:text-brand-700">
                     {c.name}
                   </Link>
                   {c.category && <p className="text-xs text-gray-500">{c.category}</p>}

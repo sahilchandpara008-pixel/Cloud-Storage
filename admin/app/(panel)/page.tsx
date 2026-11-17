@@ -26,17 +26,15 @@ export default async function Dashboard({
     report = (rows ?? []) as ReportRow[];
   }
 
-  // Same numbers as before. A tile links only where a page has the exact
-  // matching filter.
-  const tiles: { label: string; value: number | undefined; href?: string }[] = [
-    { label: "Installs from ads", value: s.installs_ads },
-    { label: "Organic installs", value: s.installs_organic },
-    { label: "App users", value: s.users, href: role === "owner" ? "/users" : undefined },
-    { label: "Logged in", value: s.registered },
-    { label: "Premium users", value: s.premium, href: role === "owner" ? "/users?filter=premium" : undefined },
-    { label: "Channels", value: s.channels, href: "/channels" },
-    { label: "Published posts", value: s.posts_published, href: "/posts?status=published" },
-  ];
+  // Same numbers as before; the rates are worked out from them. A tile
+  // links only where a page has the exact matching filter.
+  const n = (v: number | undefined) => Number(v ?? 0);
+  const fmt = (v: number | undefined) => n(v).toLocaleString("en-IN");
+  const pct = (part: number | undefined, whole: number | undefined) =>
+    n(whole) > 0 ? `${Math.round((n(part) / n(whole)) * 100)}%` : "—";
+  const installs = n(s.installs_ads) + n(s.installs_organic);
+  const adsShare = installs > 0 ? (n(s.installs_ads) / installs) * 100 : 0;
+  const owner = role === "owner";
 
   return (
     <>
@@ -62,10 +60,55 @@ export default async function Dashboard({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {tiles.map((t) => (
-          <Stat key={t.label} label={t.label} value={Number(t.value ?? 0).toLocaleString("en-IN")} href={t.href} />
-        ))}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-1">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Installs</h2>
+            <span className="text-2xl font-semibold tabular-nums tracking-tight">{installs.toLocaleString("en-IN")}</span>
+          </div>
+          <div
+            className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-blue-100"
+            role="img"
+            aria-label={`${Math.round(adsShare)}% of installs came from ads`}
+          >
+            <div className="h-full bg-purple-500" style={{ width: `${adsShare}%` }} />
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <dt className="flex items-center gap-1.5 text-xs text-gray-500">
+                <span className="h-2 w-2 rounded-full bg-purple-500" /> From ads
+              </dt>
+              <dd className="font-semibold tabular-nums">
+                {fmt(s.installs_ads)} <span className="text-xs font-normal text-gray-400">{pct(s.installs_ads, installs)}</span>
+              </dd>
+            </div>
+            <div>
+              <dt className="flex items-center gap-1.5 text-xs text-gray-500">
+                <span className="h-2 w-2 rounded-full bg-blue-200" /> Organic
+              </dt>
+              <dd className="font-semibold tabular-nums">
+                {fmt(s.installs_organic)}{" "}
+                <span className="text-xs font-normal text-gray-400">{pct(s.installs_organic, installs)}</span>
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:col-span-2">
+          <Stat label="App users" value={fmt(s.users)} icon="♙" tone="blue" href={owner ? "/users" : undefined} />
+          <Stat label="Logged in" value={fmt(s.registered)} icon="✓" tone="green" hint={`${pct(s.registered, s.users)} of users`} />
+          <Stat
+            label="Premium users"
+            value={fmt(s.premium)}
+            icon="★"
+            tone="amber"
+            hint={`${pct(s.premium, s.users)} of users`}
+            href={owner ? "/users?filter=premium" : undefined}
+          />
+          <Stat label="Channels" value={fmt(s.channels)} icon="▦" tone="brand" href="/channels" />
+          <Stat label="Published posts" value={fmt(s.posts_published)} icon="▶" tone="purple" href="/posts?status=published" />
+          <Stat label="Upload content" value="+" icon="⇪" tone="gray" hint="Single or bulk" href="/posts/new" />
+        </div>
       </div>
 
       {role === "owner" && (
