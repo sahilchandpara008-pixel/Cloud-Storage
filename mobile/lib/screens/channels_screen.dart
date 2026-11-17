@@ -86,7 +86,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
                   child: TextField(
                     decoration: const InputDecoration(
-                      hintText: 'Search',
+                      hintText: 'Search channels by name or topic',
                       prefixIcon: Icon(Icons.search_rounded),
                       fillColor: AppColors.surfaceHigh,
                       isDense: true,
@@ -192,7 +192,14 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
                           ],
                         ),
                       ),
-                      Expanded(child: _list(discover, 'No channels found.')),
+                      Expanded(
+                        child: _list(
+                          discover,
+                          search.trim().isEmpty
+                              ? 'No channels found.'
+                              : 'No channels match "${search.trim()}".\nLooking for a video? Search in the Explore tab.',
+                        ),
+                      ),
                     ],
                   ),
                   _list(joined, 'You haven\'t joined any channels yet.'),

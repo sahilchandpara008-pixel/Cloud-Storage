@@ -82,11 +82,24 @@ class Backend {
   }
 
   // ---------------------------------------------------------------- content
-  static Future<List<Post>> explore(String tab, {int offset = 0}) async {
+  /// [search] matches a post's title, caption or channel name. The database
+  /// still applies the usual visibility rules, so search never shows a user
+  /// anything they couldn't already open.
+  static Future<List<Post>> explore(
+    String tab, {
+    int offset = 0,
+    String? search,
+  }) async {
+    final term = search?.trim();
     final rows = await sb
         .rpc(
           'explore',
-          params: {'p_tab': tab, 'p_limit': 30, 'p_offset': offset},
+          params: {
+            'p_tab': tab,
+            'p_limit': 30,
+            'p_offset': offset,
+            if (term != null && term.isNotEmpty) 'p_search': term,
+          },
         )
         .select(Post.select);
     return (rows as List)
@@ -142,11 +155,13 @@ class Backend {
   /// Other posts by the same uploader ("More from this creator"). The
   /// database still decides what this user may see (audience, approval).
   static Future<List<Post>> moreFromCreator(Post post) async {
+    // No published_at filter here: the database already hides scheduled
+    // posts by its own clock, and a phone with a wrong clock must not decide
+    // what is visible.
     var q = sb
         .from('posts')
         .select(Post.select)
         .eq('status', 'published')
-        .lte('published_at', DateTime.now().toUtc().toIso8601String())
         .neq('id', post.id);
     q = post.createdBy != null
         ? q.eq('created_by', post.createdBy!)
@@ -169,7 +184,13 @@ class Backend {
         .eq('review_status', 'approved')
         .eq('status', 'published');
     if (search != null && search.trim().isNotEmpty) {
-      q = q.ilike('name', '%${search.trim()}%');
+      // Commas/parentheses/wildcards would break the filter syntax.
+      final term = search.trim().replaceAll(RegExp(r'[,()%_*\\]'), ' ').trim();
+      if (term.isNotEmpty) {
+        q = q.or(
+          'name.ilike.%$term%,description.ilike.%$term%,category.ilike.%$term%',
+        );
+      }
     }
     final column = switch (sort) {
       'latest' => 'created_at',

@@ -1074,6 +1074,33 @@ reset role;
 select public.bunny_sync_tick();  -- must be a safe no-op when nothing is configured
 select t.ok(true, 'bunny_sync_tick is safe when no function URL / pg_net is configured');
 
+-- Search in Explore: narrows the list, never widens what a user may see.
+set role authenticated;
+select t.act_as('bunny_nonpremium_user');
+select t.ok((select count(*) from public.explore('all', 30, 0, 'bulk upload')) = 1,
+            'search finds a post by its title');
+select t.ok((select count(*) from public.explore('all', 30, 0, 'BULK')) = 1,
+            'search ignores case');
+select t.ok((select count(*) from public.explore('all', 30, 0, 'everyone channel')) >= 1,
+            'search finds posts by their channel name');
+select t.ok((select count(*) from public.explore('all', 30, 0, 'hidden')) = 0,
+            'search never returns a hidden post');
+select t.ok((select count(*) from public.explore('all', 30, 0, 'scheduled')) = 0,
+            'search never returns a scheduled post');
+select t.ok((select count(*) from public.explore('all', 30, 0, 'processing')) = 0,
+            'search never returns a post whose video is still encoding');
+select t.ok((select count(*) from public.explore('all', 30, 0, '%')) = 0,
+            'a % in the search is literal, not a wildcard');
+select t.ok((select count(*) from public.explore('all', 30, 0, '')) = (select count(*) from public.explore('all', 30, 0)),
+            'an empty search is the normal list');
+select t.act_as('ads_user');
+select t.ok((select count(*) from public.explore('all', 30, 0, 'all/ads')) = 1,
+            'ads users find ads-audience posts by search');
+select t.act_as('organic_user');
+select t.ok((select count(*) from public.explore('all', 30, 0, 'all/ads')) = 0,
+            'organic users never find ads-only posts by search');
+reset role;
+
 -- Free mode: no plans; ads users (and approved organic users) get full access,
 -- organic users ask for it; everyone logged in gets 15 GB of cloud.
 delete from public.subscriptions;

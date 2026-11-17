@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models.dart';
@@ -23,6 +25,34 @@ class _ExploreScreenState extends State<ExploreScreen> {
     ('most_watched', 'Most watched'),
   ];
 
+  final _controller = TextEditingController();
+  Timer? _debounce;
+  bool searching = false;
+  String query = '';
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _closeSearch() {
+    _debounce?.cancel();
+    _controller.clear();
+    setState(() {
+      searching = false;
+      query = '';
+    });
+  }
+
+  void _onChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      if (mounted) setState(() => query = value.trim());
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -33,8 +63,40 @@ class _ExploreScreenState extends State<ExploreScreen> {
             decoration: BoxDecoration(gradient: AppColors.barGradient),
             child: SizedBox.expand(),
           ),
-          title: const Text('Explore'),
-          actions: [
+          title: searching
+              ? TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  onChanged: _onChanged,
+                  onSubmitted: (v) {
+                    _debounce?.cancel();
+                    setState(() => query = v.trim());
+                  },
+                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 16),
+                  decoration: const InputDecoration(
+                    hintText: 'Search videos, shows, channels',
+                    filled: false,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                  ),
+                )
+              : const Text('Explore'),
+          actions: searching
+              ? [
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: 'Close search',
+                    onPressed: _closeSearch,
+                  ),
+                ]
+              : [
+            IconButton(
+              icon: const Icon(Icons.search_rounded),
+              tooltip: 'Search',
+              onPressed: () => setState(() => searching = true),
+            ),
             IconButton(
               icon: const Icon(Icons.info_outline),
               tooltip: 'About Explore',
@@ -56,7 +118,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
             const CrownButton(),
           ],
-          bottom: PreferredSize(
+          bottom: searching
+              ? null
+              : PreferredSize(
             preferredSize: const Size.fromHeight(52),
             child: Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -97,8 +161,25 @@ class _ExploreScreenState extends State<ExploreScreen> {
             ),
           ),
         ),
-        body: TabBarView(
-          children: [for (final t in tabs) _ExploreGrid(tab: t.$1)],
+        // The tabs stay mounted (just hidden) while searching, so closing the
+        // search brings back exactly what was on screen.
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            Offstage(
+              offstage: searching,
+              child: TabBarView(
+                children: [for (final t in tabs) _ExploreGrid(tab: t.$1)],
+              ),
+            ),
+            if (searching)
+              query.isEmpty
+                  ? const EmptyState(
+                      message: 'Search videos, shows and channels.',
+                      icon: Icons.search_rounded,
+                    )
+                  : _SearchResults(key: ValueKey(query), query: query),
+          ],
         ),
       ),
     );
@@ -219,6 +300,101 @@ class _ExploreGridState extends State<_ExploreGrid>
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Results for a search: same cards as the Explore grid. The database applies
+/// the normal visibility rules, so a user only ever finds what they could open.
+class _SearchResults extends StatefulWidget {
+  final String query;
+  const _SearchResults({super.key, required this.query});
+
+  @override
+  State<_SearchResults> createState() => _SearchResultsState();
+}
+
+class _SearchResultsState extends State<_SearchResults> {
+  List<Post>? posts;
+  String? error;
+  bool loadingMore = false;
+  bool done = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final list = await Backend.explore('all', search: widget.query);
+      if (!mounted) return;
+      setState(() {
+        posts = list;
+        error = null;
+        done = list.length < 30;
+      });
+    } catch (e) {
+      if (mounted) setState(() => error = friendlyError(e));
+    }
+  }
+
+  Future<void> _more() async {
+    if (loadingMore || done || posts == null) return;
+    loadingMore = true;
+    try {
+      final list = await Backend.explore(
+        'all',
+        offset: posts!.length,
+        search: widget.query,
+      );
+      if (mounted) {
+        setState(() {
+          posts = [...posts!, ...list];
+          done = list.length < 30;
+        });
+      }
+    } finally {
+      loadingMore = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (error != null && posts == null) {
+      return ErrorRetry(message: error!, onRetry: _load);
+    }
+    if (posts == null) return const Center(child: CircularProgressIndicator());
+    if (posts!.isEmpty) {
+      return EmptyState(
+        message:
+            'No videos found for "${widget.query}".\nTry another word, or look for a channel in the Channels tab.',
+        icon: Icons.search_off_rounded,
+      );
+    }
+    return NotificationListener<ScrollNotification>(
+      onNotification: (n) {
+        if (n.metrics.pixels > n.metrics.maxScrollExtent - 400) _more();
+        return false;
+      },
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final cols = (box.maxWidth / 230).floor().clamp(2, 5);
+          final cardW = (box.maxWidth - 16 * 2 - 12 * (cols - 1)) / cols;
+          return GridView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: cols,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              mainAxisExtent: cardW * 9 / 16 + 52,
+            ),
+            itemCount: posts!.length,
+            itemBuilder: (context, i) => _Tile(post: posts![i]),
+          );
+        },
       ),
     );
   }
