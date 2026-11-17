@@ -57,9 +57,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _endShown = false;
   bool? _landscape;
 
+  /// Players open right now. Next / Previous / Skip open the new player
+  /// before the old one is disposed, so only the last one to close may hand
+  /// back rotation, system bars and brightness.
+  static int _openPlayers = 0;
+
   @override
   void initState() {
     super.initState();
+    _openPlayers++;
     // Turn with the phone, like MX Player / VLC.
     ScreenRotation.follow();
     _open();
@@ -236,15 +242,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void dispose() {
     _video.removeListener(_watchEnd);
     _video.removeListener(_watchSkip);
-    // Brightness set by swiping only applies inside the player.
-    ScreenBrightness.instance.resetApplicationScreenBrightness().catchError((_) {});
+    _openPlayers--;
     _chewie?.dispose();
     _video.dispose();
-    ScreenRotation.reset();
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: SystemUiOverlay.values,
-    );
+    if (_openPlayers == 0) {
+      ScreenRotation.reset();
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: SystemUiOverlay.values,
+      );
+      // Brightness set by swiping only applies inside the player.
+      ScreenBrightness.instance.resetApplicationScreenBrightness().catchError(
+        (_) {},
+      );
+    }
     super.dispose();
   }
 

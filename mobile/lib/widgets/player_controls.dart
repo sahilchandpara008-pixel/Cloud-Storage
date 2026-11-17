@@ -346,10 +346,14 @@ class _PremiumPlayerControlsState extends State<PremiumPlayerControls> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Light dim so controls read on bright video
-                  const ColoredBox(color: Color(0x33000000)),
+                  // Light dim so controls read on bright video. Decoration
+                  // only: touches go through to the swipe/tap layer below.
+                  const IgnorePointer(
+                    child: ColoredBox(color: Color(0x33000000)),
+                  ),
                   // Top and bottom scrims
-                  const DecoratedBox(
+                  const IgnorePointer(
+                    child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
@@ -363,6 +367,7 @@ class _PremiumPlayerControlsState extends State<PremiumPlayerControls> {
                         stops: [0, 0.28, 0.62, 1],
                       ),
                     ),
+                  ),
                   ),
                   // Top bar
                   Positioned(
