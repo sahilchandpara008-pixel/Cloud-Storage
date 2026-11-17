@@ -420,7 +420,11 @@ class _Buttons extends StatelessWidget {
                 ? 'Play full content'
                 : 'Play',
           ),
-          onPressed: () => watchItem(context, post, item),
+          // Viewers with a plan start on the preview with a Skip button;
+          // everyone else goes on as before (plans page if needed).
+          onPressed: () => previewFirst(post, item) && canWatchFull(post, item)
+              ? openItem(context, post, item)
+              : watchItem(context, post, item),
         ),
         if (trailer) ...[
           const SizedBox(height: 10),

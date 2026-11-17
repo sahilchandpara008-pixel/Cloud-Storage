@@ -1,6 +1,7 @@
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import 'package:video_player/video_player.dart';
 
 import '../services/screen_rotation.dart';
@@ -19,12 +20,30 @@ class PlayerScreen extends StatefulWidget {
 
   /// Set when playing a trailer: called from the pop-up shown when it ends.
   final void Function(BuildContext)? onTrailerEnd;
+
+  /// Preview first: a Skip button for the first [skipFor] of the video.
+  final void Function(BuildContext)? onSkip;
+
+  /// Preview first, viewer has a plan: the preview's end goes on to the
+  /// full video (instead of the subscribe pop-up).
+  final void Function(BuildContext)? onPreviewDone;
+
+  /// Next / previous video (same channel, then the next channel).
+  final void Function(BuildContext)? onNext;
+  final void Function(BuildContext)? onPrevious;
+
+  static const skipFor = Duration(seconds: 10);
+
   const PlayerScreen({
     super.key,
     required this.url,
     required this.title,
     this.onWatchFull,
     this.onTrailerEnd,
+    this.onSkip,
+    this.onPreviewDone,
+    this.onNext,
+    this.onPrevious,
   });
 
   @override
@@ -75,7 +94,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
         .initialize()
         .then((_) {
           if (!mounted) return;
-          if (widget.onTrailerEnd != null) _video.addListener(_watchEnd);
+          if (widget.onTrailerEnd != null || widget.onPreviewDone != null) {
+            _video.addListener(_watchEnd);
+          }
+          if (widget.onSkip != null) _video.addListener(_watchSkip);
           setState(() {
             _chewie = ChewieController(
               videoPlayerController: _video,
@@ -86,6 +108,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
               customControls: PremiumPlayerControls(
                 title: widget.title,
                 onRotate: _rotate,
+                onNext: widget.onNext == null ? null : () => _go(widget.onNext!),
+                onPrevious: widget.onPrevious == null
+                    ? null
+                    : () => _go(widget.onPrevious!),
               ),
               materialProgressColors: ChewieProgressColors(
                 playedColor: AppColors.primary,
@@ -115,7 +141,31 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
     if (_endShown || !mounted) return;
     _endShown = true;
-    _showSubscribe();
+    if (widget.onPreviewDone != null) {
+      _go(widget.onPreviewDone!);
+    } else {
+      _showSubscribe();
+    }
+  }
+
+  /// Skip is offered only during the first seconds of the preview.
+  bool _skipVisible = true;
+  void _watchSkip() {
+    final show = _video.value.position < PlayerScreen.skipFor;
+    if (show != _skipVisible && mounted) setState(() => _skipVisible = show);
+  }
+
+  /// Leave this video for another one (Next, Previous, Skip, preview end).
+  /// The callback replaces this player, so Back still goes where it did.
+  bool _leaving = false;
+  void _go(void Function(BuildContext) next) {
+    if (_leaving || !mounted) return;
+    _leaving = true;
+    _video.pause();
+    next(context);
+    // If nothing replaced the player (no next video, plans page closed),
+    // the buttons work again.
+    Future.delayed(const Duration(seconds: 2), () => _leaving = false);
   }
 
   Future<void> _showSubscribe() async {
@@ -185,6 +235,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     _video.removeListener(_watchEnd);
+    _video.removeListener(_watchSkip);
+    // Brightness set by swiping only applies inside the player.
+    ScreenBrightness.instance.resetApplicationScreenBrightness().catchError((_) {});
     _chewie?.dispose();
     _video.dispose();
     ScreenRotation.reset();
@@ -262,6 +315,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   // ratio inside; controls and gestures cover the screen.
                   : Chewie(controller: _chewie!),
             ),
+            // Preview first: Skip, for the first seconds only.
+            if (ready && widget.onSkip != null && _skipVisible)
+              Positioned(
+                right: 16,
+                bottom: (_landscape ?? false) ? 64 : 72,
+                child: _SkipButton(onTap: () => _go(widget.onSkip!)),
+              ),
             // Before the controls exist, keep a way back + the title.
             if (!ready)
               Positioned(
@@ -294,6 +354,41 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkipButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _SkipButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xCC000000),
+      shape: const StadiumBorder(side: BorderSide(color: Color(0x88FFFFFF))),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Skip',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(width: 4),
+              Icon(Icons.skip_next_rounded, color: Colors.white, size: 22),
+            ],
+          ),
         ),
       ),
     );

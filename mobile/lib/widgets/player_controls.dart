@@ -2,21 +2,35 @@ import 'dart:async';
 
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
+import 'package:screen_brightness/screen_brightness.dart';
 import 'package:video_player/video_player.dart';
+import 'package:volume_controller/volume_controller.dart';
 
 import '../theme.dart';
 
 /// Player overlay in the style of MX Player / VLC, drawn on top of the
 /// existing Chewie + video_player playback (no playback changes):
 /// tap to show/hide, auto-hide while playing, double-tap left/right to seek
-/// 10 s, big centre controls, thin seek bar with times, fullscreen toggle.
+/// 10 s, swipe up/down on the left for brightness and on the right for
+/// volume, swipe left/right to seek, previous/next video, big centre
+/// controls, thin seek bar with times, fullscreen toggle.
 class PremiumPlayerControls extends StatefulWidget {
   final String title;
 
   /// Rotate button (MX Player style); without it the button uses Chewie's
   /// fullscreen.
   final VoidCallback? onRotate;
-  const PremiumPlayerControls({super.key, required this.title, this.onRotate});
+
+  /// Previous / next video; the buttons are hidden when null.
+  final VoidCallback? onNext;
+  final VoidCallback? onPrevious;
+  const PremiumPlayerControls({
+    super.key,
+    required this.title,
+    this.onRotate,
+    this.onNext,
+    this.onPrevious,
+  });
 
   @override
   State<PremiumPlayerControls> createState() => _PremiumPlayerControlsState();
@@ -33,6 +47,28 @@ class _PremiumPlayerControlsState extends State<PremiumPlayerControls> {
   double? _dragValue; // seek bar position while dragging (ms)
   String? _seekFlash; // "+10s" / "-10s" feedback
   Timer? _flashTimer;
+
+  // Swipe gestures (MX Player style).
+  static const _edge = 40.0; // leave the screen edges to Android's gestures
+  _Swipe? _swipe; // what the current drag changes
+  double _brightness = 0.5;
+  double _volume = 0.5;
+  Duration? _seekTarget; // horizontal swipe: where the video will jump to
+  double _swipeDx = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Swipe changes the media volume quietly (no system volume pop-up).
+    VolumeController.instance.showSystemUI = false;
+    ScreenBrightness.instance.application
+        .then((b) => _brightness = b)
+        .catchError((_) => _brightness);
+    VolumeController.instance
+        .getVolume()
+        .then((v) => _volume = v)
+        .catchError((_) => _volume);
+  }
 
   @override
   void didChangeDependencies() {
@@ -108,6 +144,70 @@ class _PremiumPlayerControlsState extends State<PremiumPlayerControls> {
     _poke();
   }
 
+  bool _nearEdge(Offset p, Size size) =>
+      p.dx < _edge || p.dx > size.width - _edge || p.dy < _edge;
+
+  void _verticalStart(DragStartDetails d, Size size) {
+    if (_nearEdge(d.globalPosition, size)) return;
+    final left = d.globalPosition.dx < size.width / 2;
+    _swipe = left ? _Swipe.brightness : _Swipe.volume;
+    if (!left) {
+      VolumeController.instance.getVolume().then((v) => _volume = v).catchError((_) => _volume);
+    }
+    setState(() {});
+  }
+
+  void _verticalUpdate(DragUpdateDetails d, Size size) {
+    if (_swipe == null) return;
+    final change = -d.delta.dy / (size.height * 0.7);
+    setState(() {
+      if (_swipe == _Swipe.brightness) {
+        _brightness = (_brightness + change).clamp(0.02, 1.0);
+        ScreenBrightness.instance
+            .setApplicationScreenBrightness(_brightness)
+            .catchError((_) {});
+      } else {
+        _volume = (_volume + change).clamp(0.0, 1.0);
+        VolumeController.instance.setVolume(_volume).catchError((_) {});
+      }
+    });
+  }
+
+  void _horizontalStart(DragStartDetails d, Size size) {
+    final v = _video;
+    if (v == null || _nearEdge(d.globalPosition, size)) return;
+    if (v.value.duration <= Duration.zero) return;
+    _swipe = _Swipe.seek;
+    _swipeDx = 0;
+    _hideTimer?.cancel();
+    setState(() => _seekTarget = v.value.position);
+  }
+
+  void _horizontalUpdate(DragUpdateDetails d, Size size) {
+    final v = _video;
+    if (_swipe != _Swipe.seek || v == null) return;
+    _swipeDx += d.delta.dx;
+    // A full-width swipe moves 90 seconds (shorter videos: their length).
+    final span = v.value.duration < const Duration(seconds: 90)
+        ? v.value.duration
+        : const Duration(seconds: 90);
+    final delta = span * (_swipeDx / size.width);
+    var target = v.value.position + delta;
+    if (target < Duration.zero) target = Duration.zero;
+    if (target > v.value.duration) target = v.value.duration;
+    setState(() => _seekTarget = target);
+  }
+
+  void _dragEnd([DragEndDetails? _]) {
+    final target = _seekTarget;
+    if (_swipe == _Swipe.seek && target != null) _video?.seekTo(target);
+    setState(() {
+      _swipe = null;
+      _seekTarget = null;
+    });
+    if (_visible) _scheduleHide();
+  }
+
   void _back() {
     final c = _chewie!;
     if (c.isFullScreen) {
@@ -166,6 +266,18 @@ class _PremiumPlayerControlsState extends State<PremiumPlayerControls> {
                     onTap: _toggleVisible,
                     onDoubleTap: () =>
                         _seekBy(dir < 0 ? -_seekStep : _seekStep),
+                    onVerticalDragStart: (d) =>
+                        _verticalStart(d, box.biggest),
+                    onVerticalDragUpdate: (d) =>
+                        _verticalUpdate(d, box.biggest),
+                    onVerticalDragEnd: _dragEnd,
+                    onVerticalDragCancel: _dragEnd,
+                    onHorizontalDragStart: (d) =>
+                        _horizontalStart(d, box.biggest),
+                    onHorizontalDragUpdate: (d) =>
+                        _horizontalUpdate(d, box.biggest),
+                    onHorizontalDragEnd: _dragEnd,
+                    onHorizontalDragCancel: _dragEnd,
                   ),
                 ),
             ],
@@ -182,6 +294,33 @@ class _PremiumPlayerControlsState extends State<PremiumPlayerControls> {
                     ? Icons.fast_rewind_rounded
                     : Icons.fast_forward_rounded,
                 text: _seekFlash!,
+              ),
+            ),
+
+          // Swipe feedback
+          if (_swipe == _Swipe.brightness || _swipe == _Swipe.volume)
+            Align(
+              alignment: const Alignment(0, -0.45),
+              child: _Pill(
+                icon: _swipe == _Swipe.brightness
+                    ? Icons.brightness_6_rounded
+                    : _volume == 0
+                    ? Icons.volume_off_rounded
+                    : Icons.volume_up_rounded,
+                text:
+                    '${_swipe == _Swipe.brightness ? 'Brightness' : 'Volume'} '
+                    '${((_swipe == _Swipe.brightness ? _brightness : _volume) * 100).round()}%',
+              ),
+            ),
+          if (_swipe == _Swipe.seek && _seekTarget != null)
+            Align(
+              alignment: const Alignment(0, -0.45),
+              child: _Pill(
+                icon: _seekTarget! < value.position
+                    ? Icons.fast_rewind_rounded
+                    : Icons.fast_forward_rounded,
+                text:
+                    '${_fmt(_seekTarget!)} / ${_fmt(value.duration)}',
               ),
             ),
 
@@ -279,13 +418,26 @@ class _PremiumPlayerControlsState extends State<PremiumPlayerControls> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (widget.onPrevious != null) ...[
+                          _RoundButton(
+                            icon: Icons.skip_previous_rounded,
+                            size: 44,
+                            tooltip: 'Previous video',
+                            onTap: widget.onPrevious!,
+                          ),
+                          SizedBox(width: box.maxWidth > 500 ? 32 : 14),
+                        ],
                         _RoundButton(
                           icon: Icons.replay_10_rounded,
                           size: 52,
                           tooltip: 'Back 10 seconds',
                           onTap: () => _seekBy(-_seekStep),
                         ),
-                        SizedBox(width: box.maxWidth > 500 ? 48 : 28),
+                        SizedBox(
+                          width: box.maxWidth > 500
+                              ? 48
+                              : (widget.onNext != null ? 16 : 28),
+                        ),
                         if (!buffering)
                           _RoundButton(
                             icon: value.isPlaying
@@ -298,13 +450,26 @@ class _PremiumPlayerControlsState extends State<PremiumPlayerControls> {
                           )
                         else
                           const SizedBox(width: 74, height: 74),
-                        SizedBox(width: box.maxWidth > 500 ? 48 : 28),
+                        SizedBox(
+                          width: box.maxWidth > 500
+                              ? 48
+                              : (widget.onNext != null ? 16 : 28),
+                        ),
                         _RoundButton(
                           icon: Icons.forward_10_rounded,
                           size: 52,
                           tooltip: 'Forward 10 seconds',
                           onTap: () => _seekBy(_seekStep),
                         ),
+                        if (widget.onNext != null) ...[
+                          SizedBox(width: box.maxWidth > 500 ? 32 : 14),
+                          _RoundButton(
+                            icon: Icons.skip_next_rounded,
+                            size: 44,
+                            tooltip: 'Next video',
+                            onTap: widget.onNext!,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -517,3 +682,5 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+
+enum _Swipe { brightness, volume, seek }

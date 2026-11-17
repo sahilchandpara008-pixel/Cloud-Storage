@@ -8,6 +8,7 @@ import '../screens/premium_screen.dart';
 import '../services/backend.dart';
 import '../services/downloads.dart';
 import '../services/play_billing.dart';
+import '../services/play_queue.dart';
 import '../state/app_state.dart';
 import 'common.dart';
 
@@ -89,7 +90,14 @@ bool canWatchTrailer(Post post, PostItem item) =>
     item.hasTrailer && !canWatchFull(post, item) && app.hasAdsAccess;
 
 /// Watch a post item: login → plan (for premium items) → online player.
-Future<void> watchItem(BuildContext context, Post post, PostItem item) async {
+/// [replace]: swap the open player for this one (Next / Previous / Skip), so
+/// Back still returns to the screen the viewer started from.
+Future<void> watchItem(
+  BuildContext context,
+  Post post,
+  PostItem item, {
+  bool replace = false,
+}) async {
   final mine = post.createdBy != null && post.createdBy == app.userId;
   if (!mine && !await ensureLoggedIn(context, reason: 'Log in to watch')) {
     return;
@@ -107,6 +115,7 @@ Future<void> watchItem(BuildContext context, Post post, PostItem item) async {
         : Backend.mediaUrl(item.mediaKey!),
     item.isVideo,
     post.title,
+    replace: replace,
   );
 }
 
@@ -129,19 +138,68 @@ Future<void> subscribeToWatch(
 Future<void> watchTrailer(
   BuildContext context,
   Post post,
-  PostItem item,
-) async {
+  PostItem item, {
+  bool replace = false,
+}) async {
   // Viewers who can already watch the full video just see the trailer.
   final full = canWatchFull(post, item);
   await _play(
     context,
     post,
-    () => item.trailerOnBunny
-        ? Backend.bunnyStreamUrl(item.id, trailer: true)
-        : Backend.mediaUrl(item.trailerKey!),
+    () => _trailerUrl(item),
     true,
     'Trailer · ${post.title}',
     event: 'preview_view',
+    replace: replace,
+    onWatchFull: full ? null : (ctx) => watchItem(ctx, post, item),
+    onTrailerEnd: full ? null : (ctx) => subscribeToWatch(ctx, post, item),
+  );
+}
+
+Future<String> _trailerUrl(PostItem item) => item.trailerOnBunny
+    ? Backend.bunnyStreamUrl(item.id, trailer: true)
+    : Backend.mediaUrl(item.trailerKey!);
+
+/// Premium videos open on their preview first, with a Skip button, for
+/// viewers who get previews: ads users and organic users approved for ads
+/// access (plain organic users never get previews). Never for the creator.
+/// Previews can be watched any number of times.
+bool previewFirst(Post post, PostItem item) {
+  final mine = post.createdBy != null && post.createdBy == app.userId;
+  return !mine &&
+      item.isVideo &&
+      item.isPremium &&
+      item.hasTrailer &&
+      app.hasAdsAccess;
+}
+
+/// Preview first. Skip (shown for the first seconds) and the preview's end
+/// lead to the full video for viewers with a plan; Skip takes everyone else
+/// to the plans page (and on to the full video if they then subscribe).
+Future<void> _watchPreviewFirst(
+  BuildContext context,
+  Post post,
+  PostItem item, {
+  bool replace = false,
+}) {
+  final full = canWatchFull(post, item);
+  return _play(
+    context,
+    post,
+    () => _trailerUrl(item),
+    true,
+    'Preview · ${post.title}',
+    event: 'preview_view',
+    replace: replace,
+    onSkip: full
+        ? (ctx) => watchItem(ctx, post, item, replace: true)
+        : (ctx) async {
+            await openPlans(ctx);
+            if (ctx.mounted && canWatchFull(post, item)) {
+              await watchItem(ctx, post, item, replace: true);
+            }
+          },
+    onPreviewDone: full ? (ctx) => watchItem(ctx, post, item, replace: true) : null,
     onWatchFull: full ? null : (ctx) => watchItem(ctx, post, item),
     onTrailerEnd: full ? null : (ctx) => subscribeToWatch(ctx, post, item),
   );
@@ -154,12 +212,53 @@ bool showTrailerButton(Post post, PostItem item) =>
     item.hasTrailer &&
     (canWatchTrailer(post, item) || canWatchFull(post, item));
 
-/// Tap on a post's media: trailer when that's all the user may watch,
-/// otherwise the full item (with its gates).
-Future<void> openItem(BuildContext context, Post post, PostItem item) =>
-    canWatchTrailer(post, item)
-    ? watchTrailer(context, post, item)
-    : watchItem(context, post, item);
+/// Tap on a post's media: preview first where that applies, the trailer
+/// when that's all the user may watch, otherwise the full item (with its
+/// gates).
+Future<void> openItem(
+  BuildContext context,
+  Post post,
+  PostItem item, {
+  bool replace = false,
+}) => previewFirst(post, item)
+    ? _watchPreviewFirst(context, post, item, replace: replace)
+    : canWatchTrailer(post, item)
+    ? watchTrailer(context, post, item, replace: replace)
+    : watchItem(context, post, item, replace: replace);
+
+PostItem? _firstVideo(Post post) {
+  for (final i in post.items) {
+    if (i.isVideo) return i;
+  }
+  return null;
+}
+
+/// Next / Previous may only land on a video this viewer can actually play
+/// (no plan wall, no login wall on the way).
+bool _playableInQueue(Post post) {
+  final item = _firstVideo(post);
+  if (item == null) return false;
+  if (previewFirst(post, item) || canWatchTrailer(post, item)) return true;
+  final mine = post.createdBy != null && post.createdBy == app.userId;
+  return canWatchFull(post, item) && (mine || !app.isGuest);
+}
+
+/// Next (dir 1) or previous (dir -1) video, in place of the open player.
+Future<void> _playNeighbor(BuildContext context, Post post, int dir) async {
+  Post? next;
+  try {
+    next = await PlayQueue.neighbor(post, dir, _playableInQueue);
+  } catch (e) {
+    if (context.mounted) showSnack(context, friendlyError(e));
+    return;
+  }
+  if (!context.mounted) return;
+  if (next == null) {
+    showSnack(context, dir > 0 ? 'No more videos' : 'No earlier videos');
+    return;
+  }
+  await openItem(context, next, _firstVideo(next)!, replace: true);
+}
 
 Future<void> _play(
   BuildContext context,
@@ -168,8 +267,11 @@ Future<void> _play(
   bool isVideo,
   String title, {
   String? event,
+  bool replace = false,
   void Function(BuildContext)? onWatchFull,
   void Function(BuildContext)? onTrailerEnd,
+  void Function(BuildContext)? onSkip,
+  void Function(BuildContext)? onPreviewDone,
 }) async {
   try {
     final url = await urlResolver();
@@ -180,18 +282,26 @@ Future<void> _play(
       viewId: const Uuid().v4(),
     );
     if (!context.mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => isVideo
-            ? PlayerScreen(
-                url: url,
-                title: title,
-                onWatchFull: onWatchFull,
-                onTrailerEnd: onTrailerEnd,
-              )
-            : ImageViewerScreen(url: url, title: title),
-      ),
+    final route = MaterialPageRoute<void>(
+      builder: (_) => isVideo
+          ? PlayerScreen(
+              url: url,
+              title: title,
+              onWatchFull: onWatchFull,
+              onTrailerEnd: onTrailerEnd,
+              onSkip: onSkip,
+              onPreviewDone: onPreviewDone,
+              onNext: (ctx) => _playNeighbor(ctx, post, 1),
+              onPrevious: (ctx) => _playNeighbor(ctx, post, -1),
+            )
+          : ImageViewerScreen(url: url, title: title),
     );
+    final navigator = Navigator.of(context);
+    if (replace) {
+      await navigator.pushReplacement(route);
+    } else {
+      await navigator.push(route);
+    }
   } catch (e) {
     if (context.mounted) showSnack(context, friendlyError(e));
   }
