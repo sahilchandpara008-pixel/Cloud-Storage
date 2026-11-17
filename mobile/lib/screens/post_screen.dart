@@ -4,6 +4,7 @@ import '../models.dart';
 import '../services/backend.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/expandable_caption.dart';
 import '../widgets/gates.dart';
 import '../widgets/report.dart';
 import 'channel_screen.dart';
@@ -123,7 +124,10 @@ class _PostScreenState extends State<PostScreen> {
               ],
               if (p.caption != null && p.caption!.trim().isNotEmpty) ...[
                 const SizedBox(height: 16),
-                _Description(text: p.caption!.trim()),
+                ExpandableCaption(
+                  text: p.caption!.trim(),
+                  style: const TextStyle(fontSize: 14.5, height: 1.45),
+                ),
               ],
               const SizedBox(height: 16),
               _Uploader(post: p, onTap: () => _openChannel(p)),
@@ -527,59 +531,6 @@ class _PartsStrip extends StatelessWidget {
   }
 }
 
-class _Description extends StatefulWidget {
-  final String text;
-  const _Description({required this.text});
-
-  @override
-  State<_Description> createState() => _DescriptionState();
-}
-
-class _DescriptionState extends State<_Description> {
-  bool open = false;
-
-  @override
-  Widget build(BuildContext context) {
-    const style = TextStyle(fontSize: 14.5, height: 1.45);
-    return LayoutBuilder(
-      builder: (context, box) {
-        final painter = TextPainter(
-          text: TextSpan(text: widget.text, style: style),
-          maxLines: 4,
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
-        )..layout(maxWidth: box.maxWidth);
-        final long = painter.didExceedMaxLines;
-        painter.dispose();
-        return GestureDetector(
-          onTap: long ? () => setState(() => open = !open) : null,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.text,
-                style: style,
-                maxLines: open ? null : 4,
-                overflow: open ? null : TextOverflow.ellipsis,
-              ),
-              if (long)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    open ? 'Show less' : 'More',
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
 
 class _Uploader extends StatelessWidget {
   final Post post;

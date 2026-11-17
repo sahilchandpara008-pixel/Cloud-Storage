@@ -4,6 +4,7 @@ import '../models.dart';
 import '../screens/post_screen.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'expandable_caption.dart';
 import 'gates.dart';
 
 /// Chat-style post card used on the channel page and in the Feed.
@@ -188,8 +189,8 @@ class PostBubble extends StatelessWidget {
                   if (post.caption != null && post.caption!.isNotEmpty)
                     Padding(
                       padding: EdgeInsets.only(top: showChannel ? 4 : 0),
-                      child: Text(
-                        post.caption!,
+                      child: ExpandableCaption(
+                        text: post.caption!,
                         style: const TextStyle(
                           fontSize: 13.5,
                           color: AppColors.muted,
