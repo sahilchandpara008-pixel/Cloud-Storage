@@ -73,7 +73,7 @@ class _FeedScreenState extends State<FeedScreen> with ContentReload {
     if (error != null && posts == null) {
       return ErrorRetry(message: error!, onRetry: reload);
     }
-    if (posts == null) return const Center(child: CircularProgressIndicator());
+    if (posts == null) return const LoadingSkeleton();
     if (posts!.isEmpty) {
       return RefreshIndicator(
         onRefresh: reload,

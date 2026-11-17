@@ -397,3 +397,98 @@ String timeAgo(DateTime t) {
 
 Future<int> fileSize(PlatformFile f) async =>
     f.lengthSync() ?? await f.length() ?? 0;
+
+/// Placeholder shown while a list loads, shaped like what is coming (video
+/// cards, or channel rows) so the screen doesn't jump when it arrives.
+/// Pulses gently; still when the phone asks for reduced motion.
+class LoadingSkeleton extends StatefulWidget {
+  /// Channel rows (round avatar + two lines) instead of video cards.
+  final bool tiles;
+  const LoadingSkeleton({super.key, this.tiles = false});
+
+  @override
+  State<LoadingSkeleton> createState() => _LoadingSkeletonState();
+}
+
+class _LoadingSkeletonState extends State<LoadingSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+    lowerBound: 0.45,
+    upperBound: 1,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _pulse.stop();
+      _pulse.value = 0.7;
+    } else if (!_pulse.isAnimating) {
+      _pulse.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  Widget _box({double? w, required double h, double r = 8}) => Container(
+    width: w,
+    height: h,
+    decoration: BoxDecoration(
+      color: AppColors.surfaceHigh,
+      borderRadius: BorderRadius.circular(r),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Loading',
+      child: FadeTransition(
+        opacity: _pulse,
+        child: ListView.separated(
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(Gap.l),
+          itemCount: widget.tiles ? 8 : 3,
+          separatorBuilder: (_, _) =>
+              SizedBox(height: widget.tiles ? Gap.l : Gap.xl),
+          itemBuilder: (_, _) => widget.tiles
+              ? Row(
+                  children: [
+                    _box(w: 52, h: 52, r: 26),
+                    const SizedBox(width: Gap.m),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _box(w: 160, h: 14),
+                          const SizedBox(height: Gap.s),
+                          _box(w: 100, h: 11),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: _box(h: double.infinity, r: Radii.card),
+                    ),
+                    const SizedBox(height: Gap.m),
+                    _box(w: 220, h: 15),
+                    const SizedBox(height: Gap.s),
+                    _box(w: 140, h: 12),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}

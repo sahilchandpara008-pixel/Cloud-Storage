@@ -211,7 +211,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
 
   Widget _list(List<Channel>? channels, String empty) {
     if (channels == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingSkeleton(tiles: true);
     }
     if (channels.isEmpty) {
       return RefreshIndicator(

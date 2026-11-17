@@ -241,7 +241,7 @@ class _ExploreGridState extends State<_ExploreGrid>
     if (error != null && posts == null) {
       return ErrorRetry(message: error!, onRetry: reload);
     }
-    if (posts == null) return const Center(child: CircularProgressIndicator());
+    if (posts == null) return const LoadingSkeleton();
     if (posts!.isEmpty) {
       return RefreshIndicator(
         onRefresh: reload,
@@ -366,7 +366,7 @@ class _SearchResultsState extends State<_SearchResults> {
     if (error != null && posts == null) {
       return ErrorRetry(message: error!, onRetry: _load);
     }
-    if (posts == null) return const Center(child: CircularProgressIndicator());
+    if (posts == null) return const LoadingSkeleton();
     if (posts!.isEmpty) {
       return EmptyState(
         message:

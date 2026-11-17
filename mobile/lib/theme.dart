@@ -188,9 +188,11 @@ ThemeData buildTheme() {
         side: const BorderSide(color: AppColors.border),
       ),
     ),
-    listTileTheme: const ListTileThemeData(
+    listTileTheme: ListTileThemeData(
       iconColor: AppColors.muted,
       textColor: AppColors.text,
+      minVerticalPadding: 10,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     iconTheme: const IconThemeData(color: AppColors.text),
     filledButtonTheme: FilledButtonThemeData(
@@ -321,6 +323,7 @@ ThemeData buildTheme() {
         color: AppColors.text,
       ),
       actionTextColor: AppColors.primary,
+      insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: const BorderSide(color: AppColors.border),
@@ -367,8 +370,9 @@ ThemeData buildTheme() {
       backgroundColor: const Color(0xFF111114),
       surfaceTintColor: Colors.transparent,
       elevation: 0,
-      height: 60,
-      indicatorColor: Colors.transparent,
+      height: 64,
+      indicatorColor: const Color(0x26FF7A1A),
+      indicatorShape: const StadiumBorder(),
       overlayColor: const WidgetStatePropertyAll(Color(0x14FF7A1A)),
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       labelTextStyle: WidgetStateProperty.resolveWith(
