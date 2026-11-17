@@ -54,6 +54,21 @@ export async function updateChannel(id: string, formData: FormData) {
   redirect(withMessage(back, "ok", "Channel saved."));
 }
 
+// The follower number the app shows for this channel. Real joins and
+// leaves still add or remove one on top of it (see admin_set_followers).
+export async function setFollowers(id: string, formData: FormData) {
+  const back = `/channels/${id}`;
+  const raw = String(formData.get("followers") ?? "").replace(/[\s,]/g, "");
+  if (!/^\d{1,10}$/.test(raw)) {
+    redirect(withMessage(back, "error", "Type the number of followers, for example 15000."));
+  }
+  const { supabase } = await requireAdmin();
+  const { error } = await supabase.rpc("admin_set_followers", { p_channel_id: id, p_shown: Number(raw) });
+  if (error) redirect(withMessage(back, "error", friendly(error.message)));
+  revalidatePath("/channels");
+  redirect(withMessage(back, "ok", `Followers set to ${Number(raw).toLocaleString("en-IN")}. The app shows it now.`));
+}
+
 export async function deleteChannel(id: string) {
   // Owner only, checked BEFORE anything is removed: the clean-up below is
   // permanent, so it must never run for someone the database would then refuse.

@@ -496,6 +496,35 @@ select t.ok(exists (select 1 from public.channel_members
                      where channel_id = '60000000-0000-0000-0000-000000000001' and user_id = t.id('organic_user')),
             'creator follows their approved channel');
 
+-- Followers shown in the app: set by the admin, real joins still add/remove one.
+select public.admin_set_followers('60000000-0000-0000-0000-000000000001', 5000);
+select t.ok((select members_count from public.channels where id = '60000000-0000-0000-0000-000000000001') = 5000,
+            'admin sets the followers shown');
+select t.act_as('ads_user');
+insert into public.channel_members (channel_id, user_id)
+values ('60000000-0000-0000-0000-000000000001', t.id('ads_user'));
+select t.ok((select members_count from public.channels where id = '60000000-0000-0000-0000-000000000001') = 5001,
+            'a join adds one to the admin number');
+delete from public.channel_members
+ where channel_id = '60000000-0000-0000-0000-000000000001' and user_id = t.id('ads_user');
+select t.ok((select members_count from public.channels where id = '60000000-0000-0000-0000-000000000001') = 5000,
+            'a leave removes one again');
+select t.fails($$select public.admin_set_followers('60000000-0000-0000-0000-000000000001', 99999)$$,
+               'app users cannot set followers');
+select t.act_as('organic_user');
+update public.channels set members_count = 123456, followers_offset = 123456
+ where id = '60000000-0000-0000-0000-000000000001';
+select t.act_as('owner');
+select t.ok((select members_count || '/' || followers_offset from public.channels
+              where id = '60000000-0000-0000-0000-000000000001') = '5000/4999',
+            'creator cannot change followers or the offset');
+select t.fails($$select public.admin_set_followers('60000000-0000-0000-0000-000000000001', -1)$$,
+               'followers cannot be negative');
+-- Back to the real count (1: the creator) for the tests below.
+select public.admin_set_followers('60000000-0000-0000-0000-000000000001', 1);
+select t.ok((select followers_offset from public.channels where id = '60000000-0000-0000-0000-000000000001') = 0,
+            'setting the real count clears the offset');
+
 select t.act_as('organic_user');
 insert into public.posts (id, channel_id, title, audience, status)
 values ('70000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001', 'Vlog 1', 'organic', 'published');

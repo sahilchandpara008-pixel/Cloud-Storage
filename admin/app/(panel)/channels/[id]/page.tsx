@@ -5,7 +5,7 @@ import { DeleteButton } from "@/components/delete-button";
 import { Button, Card, Flash, Input, LinkButton, PageHeader } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
 import { withMessage } from "@/lib/format";
-import { addFolder, deleteChannel, deleteFolder, updateChannel, updateFolder } from "../actions";
+import { addFolder, deleteChannel, deleteFolder, setFollowers, updateChannel, updateFolder } from "../actions";
 
 type Folder = { id: string; name: string; position: number; posts: { count: number }[] };
 
@@ -22,7 +22,7 @@ export default async function ChannelPage({
 
   const { data: channel } = await supabase
     .from("channels")
-    .select("id, name, handle, description, category, icon_url, audience, status, members_count")
+    .select("id, name, handle, description, category, icon_url, audience, status, members_count, followers_offset")
     .eq("id", id)
     .maybeSingle();
   // A deleted channel's link (old tab, bookmark, a late redirect) lands on the
@@ -45,7 +45,7 @@ export default async function ChannelPage({
     <>
       <PageHeader
         title={channel.name}
-        subtitle={`${channel.members_count} members · Created by ${createdBy ?? "admin panel"}`}
+        subtitle={`${Number(channel.members_count).toLocaleString("en-IN")} followers shown in the app · Created by ${createdBy ?? "admin panel"}`}
         action={
           <div className="flex gap-2">
             <LinkButton variant="secondary" href={`/posts?channel=${id}`}>
@@ -68,6 +68,25 @@ export default async function ChannelPage({
             values={channel as ChannelValues}
             submitLabel="Save channel"
           />
+        </Card>
+
+        <div className="space-y-6">
+        <Card>
+          <h2 className="mb-1 font-semibold">Followers shown in app</h2>
+          <p className="mb-4 text-sm text-gray-500">
+            The number people see on this channel in the app. Each real join adds one to it and each leave removes
+            one. Real follows right now: {Math.max(0, Number(channel.members_count) - Number(channel.followers_offset ?? 0)).toLocaleString("en-IN")}.
+          </p>
+          <form action={setFollowers.bind(null, id)} className="flex gap-2">
+            <Input
+              name="followers"
+              inputMode="numeric"
+              defaultValue={String(channel.members_count)}
+              aria-label="Followers shown in app"
+              required
+            />
+            <Button type="submit">Save</Button>
+          </form>
         </Card>
 
         <Card>
@@ -100,6 +119,7 @@ export default async function ChannelPage({
             <Button type="submit">Add</Button>
           </form>
         </Card>
+        </div>
       </div>
 
       {role === "owner" && (
