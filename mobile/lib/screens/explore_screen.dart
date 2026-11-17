@@ -627,7 +627,7 @@ class _Tile extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(2, 2, 2, 0),
                 child: Text(
-                  '${post.channelName} · ${timeAgo(post.publishedAt)}',
+                  post.channelName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

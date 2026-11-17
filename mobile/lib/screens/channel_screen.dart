@@ -161,19 +161,7 @@ class _ChannelScreenState extends State<ChannelScreen> {
                               color: Colors.white,
                             ),
                             Text(
-                              ' ${c.membersCount}   ',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const Icon(
-                              Icons.folder_outlined,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                            Text(
-                              ' ${c.foldersCount}',
+                              ' ${formatCount(c.membersCount)} followers',
                               style: const TextStyle(
                                 fontSize: 15,
                                 color: Colors.white,
@@ -293,18 +281,8 @@ class _ChannelScreenState extends State<ChannelScreen> {
                             itemCount: shown.length,
                             itemBuilder: (context, i) {
                               final p = shown[i];
-                              final next = i + 1 < shown.length
-                                  ? shown[i + 1]
-                                  : null;
-                              final newDay =
-                                  next == null ||
-                                  !DateUtils.isSameDay(
-                                    next.publishedAt,
-                                    p.publishedAt,
-                                  );
                               return Column(
                                 children: [
-                                  if (newDay) DateChip(date: p.publishedAt),
                                   PostBubble(
                                     post: p,
                                     onDelete: isCreator

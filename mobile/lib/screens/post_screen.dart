@@ -338,7 +338,6 @@ class _MetaRow extends StatelessWidget {
   Widget build(BuildContext context) {
     const style = TextStyle(color: AppColors.muted, fontSize: 13.5);
     final parts = <String>[
-      '${post.publishedAt.year}',
       if (item?.durationS != null) _long(item!.durationS!),
       if (post.viewCount > 0) _views(post.viewCount),
     ];

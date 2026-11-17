@@ -59,7 +59,6 @@ class PostBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cover = post.cover;
-    final time = TimeOfDay.fromDateTime(post.publishedAt).format(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
       child: Container(
@@ -72,7 +71,7 @@ class PostBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: channel + time + menu
+            // Header: channel + menu
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
               child: Row(
@@ -94,13 +93,6 @@ class PostBubble extends StatelessWidget {
                           style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          '${timeAgo(post.publishedAt)} · $time',
-                          style: const TextStyle(
-                            color: AppColors.muted,
-                            fontSize: 11.5,
                           ),
                         ),
                       ],
@@ -203,52 +195,6 @@ class PostBubble extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// "01 Oct 2025" separator between days.
-class DateChip extends StatelessWidget {
-  final DateTime date;
-  const DateChip({super.key, required this.date});
-
-  static const _months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final label =
-        '${date.day.toString().padLeft(2, '0')} ${_months[date.month - 1]} ${date.year}';
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceHigh,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: AppColors.muted,
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
         ),
       ),
     );

@@ -361,6 +361,15 @@ class SectionTitle extends StatelessWidget {
   }
 }
 
+/// 950 / 1.2K / 15K / 1.5M (follower counts).
+String formatCount(int n) {
+  String short(double v) =>
+      v >= 10 || v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
+  if (n >= 1000000) return '${short(n / 1000000)}M';
+  if (n >= 1000) return '${short(n / 1000)}K';
+  return '$n';
+}
+
 /// 1:05 / 1:02:03
 String formatDuration(int seconds) {
   final h = seconds ~/ 3600;
