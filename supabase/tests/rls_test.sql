@@ -1225,5 +1225,72 @@ select t.ok(public.request_full_access() = 'approved', 'approved users see appro
 update public.app_mode set free_mode = false;  -- RLS: matches no rows for app users
 reset role;
 select t.ok((select free_mode from public.app_mode) , 'free mode unchanged by app users');
+
+-- ---------------------------------------------------------------------------
+-- New installs from Gujarat / Maharashtra never get ads content.
+-- ---------------------------------------------------------------------------
+insert into t.ids values
+  ('gj_guest',    '00000000-0000-0000-0000-000000000091'),
+  ('mh_guest',    '00000000-0000-0000-0000-000000000092'),
+  ('other_guest', '00000000-0000-0000-0000-000000000093'),
+  ('spoof_guest', '00000000-0000-0000-0000-000000000094'),
+  ('gj_user',     '00000000-0000-0000-0000-000000000095');
+insert into auth.users (id, email, is_anonymous) values
+  (t.id('gj_guest'), null, true), (t.id('mh_guest'), null, true),
+  (t.id('other_guest'), null, true), (t.id('spoof_guest'), null, true),
+  (t.id('gj_user'), 'gj@example.com', false);
+insert into public.geo_blocked_ranges values ('192.0.2.0', '192.0.2.127', 'GJ'), ('2001:db8::', '2001:db8::ffff', 'MH');
+select t.ok((select count(*) from public.installs where geo_blocked) = 0, 'installs from before the rule are not flagged');
+set role authenticated;
+
+select set_config('request.headers', '{"cf-connecting-ip": "192.0.2.10"}', false);
+select t.act_as('gj_guest');
+select t.ok(public.record_install('30000000-0000-0000-0000-000000000091', 'ok',
+            'utm_source=facebook&utm_medium=paid_social') = 'meta', 'Gujarat ad install still recorded as meta');
+select t.ok(public.user_source() = 'ads', 'attribution unchanged (reports and Meta stay correct)');
+select t.ok(public.geo_blocked(), 'Gujarat install is flagged');
+select t.ok(not public.has_ads_access(), 'Gujarat ad install: no ads access');
+select t.ok(not public.can_see('ads'), 'Gujarat ad install: no ads content');
+select t.ok(public.can_see('organic'), 'Gujarat ad install: sees organic content');
+select t.ok(public.my_status()->>'source' = 'organic' and not (public.my_status()->>'has_ads_access')::boolean,
+            'app sees a Gujarat ad install as organic');
+
+select set_config('request.headers', '{"cf-connecting-ip": "2001:db8::42"}', false);
+select t.act_as('mh_guest');
+select public.record_install('30000000-0000-0000-0000-000000000092', 'apk',
+       'utm_source=meta&utm_medium=paid_social&utm_campaign=apk_download');
+select t.ok(not public.has_ads_access() and public.can_see('organic'), 'Maharashtra (IPv6) ads APK install: organic only');
+
+select set_config('request.headers', '{"cf-connecting-ip": "198.51.100.20"}', false);
+select t.act_as('other_guest');
+select public.record_install('30000000-0000-0000-0000-000000000093', 'ok', 'utm_source=facebook');
+select t.ok(public.has_ads_access() and not public.geo_blocked(), 'other states: ads install keeps ads access');
+
+select set_config('request.headers', '{"x-forwarded-for": "192.0.2.10", "cf-connecting-ip": "not-an-ip"}', false);
+select t.act_as('spoof_guest');
+select t.ok(public.record_install('30000000-0000-0000-0000-000000000094', 'ok', 'utm_source=facebook') = 'meta',
+            'bad IP header does not break install');
+select t.ok(public.has_ads_access(), 'only cf-connecting-ip counts, not x-forwarded-for');
+
+-- An existing ads user re-reporting the same install from Gujarat is not flagged.
+select set_config('request.headers', '{"cf-connecting-ip": "192.0.2.10"}', false);
+select t.act_as('ads_guest');
+select public.record_install('30000000-0000-0000-0000-000000000003', 'apk',
+       'utm_source=meta&utm_medium=paid_social&utm_campaign=apk_download');
+select t.ok(public.has_ads_access(), 'existing ads install keeps access');
+
+-- Admin approval does not override the rule.
+select t.act_as('gj_user');
+select public.record_install('30000000-0000-0000-0000-000000000095', 'not_available');
+select t.ok(public.request_full_access() = 'none', 'flagged user cannot queue an access request');
+select t.act_as('owner');
+select public.set_ads_access(t.id('gj_user'), 'approved');
+select t.act_as('gj_user');
+select t.ok(not public.has_ads_access() and not public.can_see('ads'), 'approval does not unlock ads content for flagged users');
+select set_config('request.headers', '', false);
+reset role;
+select t.ok(not exists (select 1 from public.installs
+                         where install_id = '30000000-0000-0000-0000-000000000003' and geo_blocked),
+            'old install row not flagged afterwards');
 \echo
 \echo 'All tests passed.'
