@@ -52,16 +52,14 @@ async function saveFreeMode(formData: FormData) {
     withMessage(
       "/plans",
       "ok",
-      free ? "Free mode is on: plans are hidden in the app." : "Paid mode is on: plans and UPI payments are shown in the app.",
+      free
+        ? "Free mode is on: plans are hidden in the app."
+        : "Paid mode is on: plans and UPI payments are shown in the app.",
     ),
   );
 }
 
-export default async function PlansPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ ok?: string; error?: string }>;
-}) {
+export default async function PlansPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { ok, error } = await searchParams;
   const { supabase } = await requireOwner();
   const [{ data }, { data: mode }] = await Promise.all([
@@ -80,7 +78,7 @@ export default async function PlansPage({
       <Flash ok={ok} error={error} />
       <Card className="mb-5 py-4">
         <form action={saveFreeMode} className="flex flex-wrap items-center gap-x-4 gap-y-3">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 basis-72">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-semibold text-gray-900">Free mode</h2>
               <span
@@ -92,9 +90,8 @@ export default async function PlansPage({
               </span>
             </div>
             <p className="mt-1 text-xs leading-5 text-gray-500">
-              On: the app is free, no plans or payments are shown, and no Purchase events reach Meta. Off: plans and
-              UPI payments are shown in every version of the app, and each approved payment is sent to Meta as a
-              Purchase.
+              On: the app is free, no plans or payments are shown, and no Purchase events reach Meta. Off: plans and UPI
+              payments are shown in every version of the app, and each approved payment is sent to Meta as a Purchase.
             </p>
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
@@ -105,58 +102,93 @@ export default async function PlansPage({
         </form>
       </Card>
 
-      <div className="space-y-4">
-        {plans.map((p) => (
-          <Card key={p.id} className="p-0!">
-            <form action={savePlan.bind(null, p.id)}>
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-5 py-3">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h2 className="font-semibold text-gray-900">{p.name}</h2>
-                  <span className="text-sm tabular-nums text-gray-500">
-                    ₹{p.price_inr.toLocaleString("en-IN")} · {p.duration_days} days
-                  </span>
-                  <span className="font-mono text-[11px] text-gray-400">{p.code}</span>
-                </div>
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    p.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {p.active ? "In app" : "Hidden"}
-                </span>
-              </div>
-              <div className="grid gap-4 px-5 py-4 lg:grid-cols-[1fr_1fr]">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
-                  <div className="col-span-2">
-                    <Field label="Name">
-                      <Input name="name" defaultValue={p.name} required />
-                    </Field>
+      <Card className="overflow-hidden p-0!">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-5 py-3">
+          <h2 className="font-semibold text-gray-900">Plans</h2>
+          <span className="text-xs text-gray-500">
+            {plans.filter((p) => p.active).length} of {plans.length} shown in the app
+          </span>
+        </div>
+        <div
+          aria-hidden="true"
+          className="hidden grid-cols-[minmax(0,1fr)_7rem_6rem_5rem_7.5rem_6.5rem] gap-3 border-b border-gray-100 bg-gray-50 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 lg:grid"
+        >
+          <span>Name</span>
+          <span>Price (₹)</span>
+          <span>Days</span>
+          <span>Order</span>
+          <span>In app</span>
+          <span />
+        </div>
+        <div className="divide-y divide-gray-100">
+          {plans.map((p) => (
+            <form key={p.id} action={savePlan.bind(null, p.id)} className="px-5 py-4 hover:bg-gray-50/60">
+              <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4 lg:grid-cols-[minmax(0,1fr)_7rem_6rem_5rem_7.5rem_6.5rem] lg:items-center">
+                <label className="col-span-2 block sm:col-span-4 lg:col-span-1">
+                  <span className="mb-1 block text-xs font-medium text-gray-600 lg:sr-only">Name</span>
+                  <div className="flex items-center gap-2">
+                    <Input name="name" defaultValue={p.name} required className="min-w-0 flex-1" />
+                    <span className="hidden shrink-0 font-mono text-[11px] text-gray-400 xl:inline">{p.code}</span>
                   </div>
-                  <Field label="Price (₹)">
-                    <Input name="price_inr" type="number" min={0} defaultValue={p.price_inr} required />
-                  </Field>
-                  <Field label="Days">
-                    <Input name="duration_days" type="number" min={1} defaultValue={p.duration_days} required />
-                  </Field>
-                  <Field label="Order">
-                    <Input name="position" type="number" defaultValue={p.position} />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-gray-600 lg:sr-only">Price (₹)</span>
+                  <Input
+                    name="price_inr"
+                    type="number"
+                    min={0}
+                    defaultValue={p.price_inr}
+                    required
+                    className="tabular-nums"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-gray-600 lg:sr-only">Days</span>
+                  <Input
+                    name="duration_days"
+                    type="number"
+                    min={1}
+                    defaultValue={p.duration_days}
+                    required
+                    className="tabular-nums"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-gray-600 lg:sr-only">Order</span>
+                  <Input name="position" type="number" defaultValue={p.position} className="tabular-nums" />
+                </label>
+                <label className="flex min-h-9 items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" name="active" defaultChecked={p.active} className="h-4 w-4" />
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      p.active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {p.active ? "In app" : "Hidden"}
+                  </span>
+                </label>
+                <Button type="submit" className="col-span-2 w-full sm:col-span-4 lg:col-span-1">
+                  Save
+                </Button>
+              </div>
+              <details className="group mt-2">
+                <summary className="inline-flex list-none items-center gap-2 text-xs text-gray-500 [&::-webkit-details-marker]:hidden">
+                  <span className="font-medium text-brand-700 group-open:hidden">Edit perks</span>
+                  <span className="hidden font-medium text-brand-700 group-open:inline">Hide perks</span>
+                  <span className="truncate group-open:hidden">
+                    {p.perks.length ? p.perks.join(" · ") : "No perks yet"}
+                  </span>
+                </summary>
+                <div className="mt-2 max-w-2xl">
+                  <Field label="Perks" hint="One per line">
+                    <Textarea name="perks" rows={3} defaultValue={p.perks.join("\n")} />
                   </Field>
                 </div>
-                <Field label="Perks" hint="One per line">
-                  <Textarea name="perks" rows={3} defaultValue={p.perks.join("\n")} />
-                </Field>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-xl border-t border-gray-100 bg-gray-50/60 px-5 py-3">
-                <label className="flex items-center gap-2 text-sm text-gray-700">
-                  <input type="checkbox" name="active" defaultChecked={p.active} className="h-4 w-4" />
-                  Show in app
-                </label>
-                <Button type="submit">Save plan</Button>
-              </div>
+              </details>
             </form>
-          </Card>
-        ))}
-      </div>
+          ))}
+        </div>
+      </Card>
     </>
   );
 }
