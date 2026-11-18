@@ -857,7 +857,7 @@ select t.ok((select count(*) from public.meta_events where event_id = 'purchase-
             and (select count(*) from public.meta_events where event_id = 'subscribe-' || t.get('mo')) = 1,
             'approved payment → one Purchase + one Subscribe (no duplicates)');
 select t.ok((select p->'custom_data'->>'value' = '259.00' and p->'custom_data'->>'currency' = 'INR'
-                    and p->>'action_source' = 'app' and p->'app_data'->'extinfo'->>1 = 'com.cloudstorage.app'
+                    and p->>'action_source' = 'app' and p->'app_data'->'extinfo'->>1 = 'com.flixvault.app'
                     and jsonb_array_length(p->'user_data'->'external_id') = 1
                from (select public.meta_event_payload(e, s) p
                        from public.meta_events e, public.meta_settings s

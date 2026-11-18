@@ -73,7 +73,8 @@ export async function connectMeta(formData: FormData) {
   const update: Record<string, unknown> = {
     pixel_id: pixel,
     access_token: token,
-    action_source: "website",
+    // Keep action_source as set: the dataset is linked to the Flixvault app
+    // (com.flixvault.app), so events go out as app events.
     enabled: true,
     updated_at: new Date().toISOString(),
   };
