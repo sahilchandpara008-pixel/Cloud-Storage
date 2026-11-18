@@ -109,6 +109,13 @@ select t.ok(public.parse_source('apk', 'utm_source=meta&utm_medium=paid_social&u
 select t.ok(public.parse_source('ok', 'utm_source=google-play&utm_medium=organic') = 'organic', 'play organic → organic');
 select t.ok(public.parse_source('not_available', null) = 'direct', 'plain APK → direct');
 select t.ok(public.parse_source('ok', 'utm_source=newsletter') = 'other', 'other source → other');
+-- Referrers Meta itself adds to Play installs from App promotion (app install) ads.
+select t.ok(public.parse_source('ok', 'utm_source=apps.facebook.com&utm_campaign=fb4a&utm_content=%7B%22app%22%3A123%2C%22t%22%3A1700000000%2C%22source%22%3A%7B%22data%22%3A%22ab%22%2C%22nonce%22%3A%22cd%22%7D%7D') = 'meta',
+            'Meta app install ad (Facebook) → meta');
+select t.ok(public.parse_source('ok', 'utm_source=apps.instagram.com&utm_campaign=ig4a&utm_content=%7B%22app%22%3A123%7D') = 'meta',
+            'Meta app install ad (Instagram) → meta');
+select t.ok(public.parse_source('ok', 'utm_source%3Dapps.facebook.com%26utm_campaign%3Dfb4a') = 'meta',
+            'url-encoded Meta app install referrer → meta');
 
 set role authenticated;
 
