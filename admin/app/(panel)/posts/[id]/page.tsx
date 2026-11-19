@@ -33,7 +33,7 @@ export default async function PostPage({
     loadChannelOptions(supabase),
     supabase
       .from("post_items")
-      .select("id, kind, is_premium, processing_status, duration_s, position, thumb_key, has_trailer, trailer_status")
+      .select("id, kind, is_premium, processing_status, duration_s, position, thumb_key, has_trailer, auto_preview, trailer_status")
       .eq("post_id", id)
       .order("position"),
   ]);

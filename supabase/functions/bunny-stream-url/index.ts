@@ -48,6 +48,21 @@ async function signBunnyDirectoryUrl(host: string, videoId: string, securityKey:
   return `https://${host}/bcdn_token=${token}&token_path=${encodedPath}&expires=${expires}${pathDir}${file}`;
 }
 
+// Token for the automatic preview playlist (checked by bunny-preview).
+async function makePreviewToken(claims: { v: string; e: number; p: string }): Promise<string> {
+  const enc = new TextEncoder();
+  const body = b64urlNoPad(enc.encode(JSON.stringify(claims)));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode("flixvault-preview:" + Deno.env.get("BUNNY_STREAM_TOKEN_KEY")!),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, enc.encode(body)));
+  return `${body}.${b64urlNoPad(sig)}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "method not allowed" }, 405);
@@ -71,17 +86,34 @@ Deno.serve(async (req) => {
   }
   if (!itemId) return json({ error: "item_id is required" }, 400);
 
-  // The database decides who may watch: the full video follows the audience +
-  // premium rule, the trailer follows the (looser) trailer rule.
-  const { data: videoId, error: rpcError } = await asUser.rpc(
-    kind === "trailer" ? "bunny_trailer_path" : "bunny_video_path",
-    { p_item_id: itemId },
-  );
+  const host = Deno.env.get("BUNNY_STREAM_HOST")!;
+  const securityKey = Deno.env.get("BUNNY_STREAM_TOKEN_KEY")!;
+
+  // Preview: an uploaded preview is signed as before; a premium video with no
+  // uploaded preview gets the automatic preview (start of the main video),
+  // served by the bunny-preview function -- the full video is never signed.
+  if (kind === "trailer") {
+    const { data: info, error: infoError } = await asUser.rpc("bunny_preview_info", { p_item_id: itemId });
+    if (infoError) return json({ error: infoError.message }, 403);
+    const preview = info as { video_id: string | null; auto: boolean } | null;
+    if (!preview?.video_id) return json({ url: null });
+    if (preview.auto) {
+      const token = await makePreviewToken({
+        v: preview.video_id,
+        e: Math.floor(Date.now() / 1000) + 3600,
+        p: "",
+      });
+      return json({ url: `${url}/functions/v1/bunny-preview/${token}/master.m3u8`, auto: true });
+    }
+    const playlist = await signBunnyDirectoryUrl(host, preview.video_id, securityKey, "playlist.m3u8");
+    return json({ url: playlist });
+  }
+
+  // Full video: audience + premium rule, decided by the database.
+  const { data: videoId, error: rpcError } = await asUser.rpc("bunny_video_path", { p_item_id: itemId });
   if (rpcError) return json({ error: rpcError.message }, 403);
   if (!videoId) return json({ url: null });
 
-  const host = Deno.env.get("BUNNY_STREAM_HOST")!;
-  const securityKey = Deno.env.get("BUNNY_STREAM_TOKEN_KEY")!;
   const playlist = await signBunnyDirectoryUrl(host, videoId, securityKey, "playlist.m3u8");
   return json({ url: playlist });
 });

@@ -1203,6 +1203,57 @@ select t.ok(not exists (select 1 from information_schema.column_privileges
             'the Bunny trailer id is not readable by app users');
 reset role;
 
+-- Automatic preview: a premium video with no uploaded preview previews its
+-- own start; an uploaded preview replaces it once encoded.
+insert into public.post_items (id, post_id, kind, is_premium, bunny_video_id, processing_status) values
+  ('91000000-0000-0000-0000-000000000040', '91000000-0000-0000-0000-000000000001', 'video', true,
+   '91000000-0000-0000-0000-000000000041', 'ready');
+insert into public.posts (id, channel_id, title, audience, status)
+select '91000000-0000-0000-0000-000000000003', channel_id, 'encoding premium', 'all', 'published'
+  from public.posts where id = '20000000-0000-0000-0000-000000000001';
+insert into public.post_items (id, post_id, kind, is_premium, bunny_video_id, processing_status) values
+  ('91000000-0000-0000-0000-000000000042', '91000000-0000-0000-0000-000000000003', 'video', true,
+   '91000000-0000-0000-0000-000000000043', 'pending');
+select t.ok((select has_trailer and auto_preview from public.post_items where id = '91000000-0000-0000-0000-000000000040'),
+            'premium video without an uploaded preview gets the automatic preview');
+select t.ok((select not has_trailer and not auto_preview from public.post_items where id = '91000000-0000-0000-0000-000000000042'),
+            'no automatic preview while the main video is still encoding');
+select t.ok((select not auto_preview from public.post_items where id = '91000000-0000-0000-0000-000000000010'),
+            'free videos get no automatic preview');
+set role authenticated;
+select t.act_as('ads_user');
+select t.ok(public.bunny_preview_info('91000000-0000-0000-0000-000000000040')
+              = '{"video_id": "91000000-0000-0000-0000-000000000041", "auto": true}'::jsonb,
+            'ads users get the automatic preview of the main video');
+select t.ok(public.bunny_preview_info('91000000-0000-0000-0000-000000000010')
+              = '{"video_id": "91000000-0000-0000-0000-000000000031", "auto": false}'::jsonb,
+            'an uploaded preview is used as is');
+select t.fails($$select public.bunny_preview_info('91000000-0000-0000-0000-000000000042')$$,
+               'no preview for a video that is still encoding');
+select t.act_as('organic_user');  -- holds a plan
+select t.ok((public.bunny_preview_info('91000000-0000-0000-0000-000000000040')->>'auto')::boolean,
+            'plan holders may open the automatic preview too');
+select t.act_as('bunny_nonpremium_user');
+select t.fails($$select public.bunny_preview_info('91000000-0000-0000-0000-000000000040')$$,
+               'organic users with no plan and no ads access get no automatic preview');
+select t.fails($$select public.bunny_video_path('91000000-0000-0000-0000-000000000040')$$,
+               'the full premium video still needs a plan');
+reset role;
+update public.post_items
+   set trailer_bunny_video_id = '91000000-0000-0000-0000-000000000044', trailer_status = 'pending'
+ where id = '91000000-0000-0000-0000-000000000040';
+select t.ok((select auto_preview from public.post_items where id = '91000000-0000-0000-0000-000000000040'),
+            'the automatic preview stays while the uploaded preview is encoding');
+update public.post_items set trailer_status = 'ready' where id = '91000000-0000-0000-0000-000000000040';
+select t.ok((select has_trailer and not auto_preview from public.post_items where id = '91000000-0000-0000-0000-000000000040'),
+            'an encoded uploaded preview replaces the automatic one');
+set role authenticated;
+select t.act_as('ads_user');
+select t.ok(public.bunny_preview_info('91000000-0000-0000-0000-000000000040')
+              = '{"video_id": "91000000-0000-0000-0000-000000000044", "auto": false}'::jsonb,
+            'viewers then get the uploaded preview');
+reset role;
+
 -- Free mode: no plans; ads users (and approved organic users) get full access,
 -- organic users ask for it; everyone logged in gets 15 GB of cloud.
 delete from public.subscriptions;

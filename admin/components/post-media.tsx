@@ -14,6 +14,8 @@ export type Item = {
   position: number;
   thumb_key: string | null;
   has_trailer: boolean;
+  // Premium video with no uploaded preview: viewers see its first 2 minutes.
+  auto_preview?: boolean;
   trailer_status: string | null;
 };
 
@@ -157,14 +159,22 @@ export function MediaItemCard({
                     {item.kind === "video" && (
                       <p className="text-xs text-gray-600">
                         Preview:{" "}
-                        {item.has_trailer ? (
-                          <span className="font-medium text-green-700">✓ ready</span>
+                        {item.has_trailer && !item.auto_preview ? (
+                          <span className="font-medium text-green-700">✓ uploaded preview</span>
                         ) : item.trailer_status === "pending" ? (
-                          <span className="font-medium text-blue-700">processing on Bunny…</span>
+                          <span className="font-medium text-blue-700">
+                            processing on Bunny…{item.auto_preview ? " (first 2 min shown meanwhile)" : ""}
+                          </span>
+                        ) : item.auto_preview ? (
+                          <span className="font-medium text-amber-700">
+                            automatic: first 2 min{item.trailer_status === "failed" ? " (uploaded preview failed)" : ""}
+                          </span>
                         ) : item.trailer_status === "failed" ? (
                           <span className="font-medium text-red-700">failed, upload it again</span>
+                        ) : item.is_premium ? (
+                          <span className="text-gray-400">none yet (shown once the video is ready)</span>
                         ) : (
-                          <span className="text-gray-400">none</span>
+                          <span className="text-gray-400">not needed for free videos</span>
                         )}
                       </p>
                     )}
@@ -177,7 +187,7 @@ export function MediaItemCard({
                         <TrailerUpload
                           channelId={channelId}
                           itemId={item.id}
-                          hasTrailer={item.has_trailer || item.trailer_status !== null}
+                          hasTrailer={(item.has_trailer && !item.auto_preview) || item.trailer_status !== null}
                         />
                       )}
                       <form action={togglePremium}>

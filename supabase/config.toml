@@ -419,3 +419,6 @@ verify_jwt = false
 
 [functions.bunny-stream-sync]
 verify_jwt = false
+
+[functions.bunny-preview]
+verify_jwt = false

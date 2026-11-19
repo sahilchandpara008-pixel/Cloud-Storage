@@ -558,7 +558,7 @@ export function ContentUploader({
               disabled={!editable}
               onPick={(f) => pickPreview(i, f)}
               onClear={() => update(i, { preview: undefined })}
-              hint="A short clip ads users can watch before buying."
+              hint="A short clip ads users can watch before buying. Skip it on a premium video and they see its first 2 minutes instead."
             />
           )}
           <Slot
@@ -722,7 +722,7 @@ export function ContentUploader({
                   file={pre.preview}
                   onPick={pickPrePreview}
                   onClear={() => setPre((p) => ({ ...p, preview: undefined }))}
-                  hint="A short clip ads users can watch before buying (videos only)."
+                  hint="A short clip ads users can watch before buying (videos only). Skip it on a premium video and they see its first 2 minutes instead."
                 />
                 <Slot
                   title="Thumbnail"
