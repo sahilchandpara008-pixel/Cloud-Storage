@@ -18,7 +18,7 @@ import { requireOwner } from "@/lib/auth";
 import { dayEnd, dayStart, isDate, rangeLabel } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
 import type { AppUser } from "@/lib/users";
-import { dismissPlanRequest, grantPremium, setAdsAccess } from "./actions";
+import { dismissPlanRequest, grantPremium } from "./actions";
 
 type PlanRequest = {
   id: string;
@@ -35,16 +35,13 @@ const filters = [
   { value: "all", label: "All users" },
   { value: "registered", label: "Registered (logged in)" },
   { value: "guest", label: "Guests" },
-  { value: "ads", label: "From ads" },
-  { value: "organic", label: "Organic" },
+  { value: "ads", label: "Gets ads content" },
+  { value: "organic", label: "Organic (no ads content)" },
   { value: "premium", label: "Active subscribers" },
   { value: "expired", label: "Plan expired" },
   { value: "paying", label: "Paid at least once" },
   { value: "repeat", label: "Repeat buyers (2+)" },
   { value: "never_paid", label: "Never paid" },
-  { value: "pending", label: "Waiting for approval" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
 ];
 
 const sorts = [
@@ -100,12 +97,6 @@ function usersUrl(sp: SP, patch: Partial<SP>) {
 const inr = (paise: number) =>
   `₹${(Number(paise) / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
-function AccessBadge({ status }: { status: AppUser["ads_access_status"] }) {
-  if (status === "pending") return <Badge tone="amber">Waiting</Badge>;
-  if (status === "approved") return <Badge tone="green">Approved</Badge>;
-  if (status === "rejected") return <Badge tone="red">Rejected</Badge>;
-  return null;
-}
 
 export default async function UsersPage({ searchParams }: { searchParams: Promise<SP> }) {
   const sp = await searchParams;
@@ -330,7 +321,7 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
           </thead>
           <tbody className="divide-y divide-gray-100">
             {users.map((u) => (
-              <tr key={u.id} className={u.ads_access_status === "pending" ? "bg-amber-50/60" : ""}>
+              <tr key={u.id}>
                 <Td>
                   <p className="font-medium">{u.display_name}</p>
                   <p className="text-xs text-gray-500">{u.is_guest ? "Guest" : u.email}</p>
@@ -363,21 +354,12 @@ export default async function UsersPage({ searchParams }: { searchParams: Promis
                   )}
                 </Td>
                 <Td>
-                  {u.source === "ads" ? (
-                    <span className="text-xs text-gray-500">Yes (ads user)</span>
+                  {u.ads_content ? (
+                    <Badge tone="purple">Yes · Meta ad install</Badge>
                   ) : (
-                    <div className="flex flex-col items-start gap-1">
-                      <AccessBadge status={u.ads_access_status} />
-                      {u.ads_access_status === "approved" ? (
-                        <form action={setAdsAccess.bind(null, u.id, "rejected", back)}>
-                          <button className="text-xs text-red-700 hover:underline">Revoke</button>
-                        </form>
-                      ) : (
-                        <form action={setAdsAccess.bind(null, u.id, "approved", back)}>
-                          <button className="text-xs text-green-700 hover:underline">Approve</button>
-                        </form>
-                      )}
-                    </div>
+                    <span className="text-xs text-gray-500">
+                      No{u.source === "ads" ? " (not a verified ad install, or Gujarat / Maharashtra)" : ""}
+                    </span>
                   )}
                 </Td>
                 <Td className="whitespace-nowrap">{formatDate(u.created_at)}</Td>

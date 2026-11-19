@@ -13,4 +13,6 @@ export type AppUser = {
   spent_paise?: number;
   last_purchase_at?: string | null;
   total_count?: number;
+  // Really gets ads content now (verified Meta-ad / ads-APK install, not geo-blocked).
+  ads_content?: boolean;
 };

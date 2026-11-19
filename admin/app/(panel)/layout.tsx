@@ -13,7 +13,6 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       isOwner ? supabase.rpc("admin_pending_payments") : Promise.resolve({ data: 0 }),
       isOwner ? supabase.rpc("admin_open_support_requests") : Promise.resolve({ data: 0 }),
     ]);
-  const pending = Number(stats?.pending_approvals ?? 0);
   const openRequests = (requests ?? []).length;
 
   // Same pages and the same owner-only rule as before; only grouped for the sidebar.
@@ -33,7 +32,6 @@ export default async function PanelLayout({ children }: { children: React.ReactN
             label: "People",
             items: [
               { href: "/users", label: "Users", icon: "♙", badge: openRequests },
-              { href: "/approvals", label: "Approvals", icon: "✓", badge: pending },
               { href: "/requests", label: "Requests", icon: "✉", badge: Number(openSupport ?? 0) },
             ],
           },

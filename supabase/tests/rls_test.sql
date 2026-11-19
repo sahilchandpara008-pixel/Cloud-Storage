@@ -255,11 +255,14 @@ select t.fails($$select public.set_ads_access(t.id('organic_buyer'), 'approved')
                'content admins cannot approve');
 
 select t.act_as('owner');
-select public.set_ads_access(t.id('organic_buyer'), 'approved');
-
+select t.fails($$select public.set_ads_access(t.id('organic_buyer'), 'approved')$$,
+               'organic users can no longer be approved for ads content');
+reset role;
+update public.profiles set ads_access_status = 'approved' where id = t.id('organic_buyer');  -- an old approval
+set role authenticated;
 select t.act_as('organic_buyer');
-select t.ok(t.visible_titles() = 'ads/ads,all/ads,all/all,all/organic,org/org',
-            'approved organic buyer sees everything');
+select t.ok(t.visible_titles() = 'all/all,all/organic,org/org',
+            'an old approval gives no ads content');
 
 select t.act_as('owner');
 select public.set_ads_access(t.id('organic_buyer'), 'rejected');
@@ -1289,17 +1292,17 @@ select t.act_as('organic_user');
 select t.ok(not public.is_premium_user(), 'free mode: organic users need approval for full content');
 select t.ok((public.my_status()->>'quota_bytes')::bigint = 16106127360, 'free mode: organic users get 15 GB cloud too');
 insert into public.cloud_files (name, is_folder) values ('Mine', true);
-select t.ok(public.request_full_access() = 'pending', 'organic user can ask for full access');
-select t.ok(public.request_full_access() = 'pending', 'asking again keeps it pending');
+select t.ok(public.request_full_access() = 'none', 'organic users cannot queue an ads-access request');
+select t.ok((select ads_access_status from public.profiles where id = t.id('organic_user')) = 'none',
+            'nothing is queued for approval');
 select t.act_as('organic_guest');
 select t.ok(not public.is_premium_user(), 'guests have no full access');
 select t.ok((public.my_status()->>'quota_bytes')::bigint = 0, 'guests have no cloud');
 select t.fails($$select public.request_full_access()$$, 'guests must log in to ask');
 select t.act_as('owner');
-select public.set_ads_access(t.id('organic_user'), 'approved');
-select t.act_as('organic_user');
-select t.ok(public.is_premium_user(), 'approved organic users get full access');
-select t.ok(public.request_full_access() = 'approved', 'approved users see approved');
+select t.fails($$select public.set_ads_access(t.id('organic_user'), 'approved')$$, 'no approval in free mode either');
+select t.act_as('ads_user');
+select t.ok(public.request_full_access() = 'approved', 'ads users see approved');
 update public.app_mode set free_mode = false;  -- RLS: matches no rows for app users
 reset role;
 select t.ok((select free_mode from public.app_mode) , 'free mode unchanged by app users');
@@ -1324,7 +1327,7 @@ set role authenticated;
 select set_config('request.headers', '{"cf-connecting-ip": "192.0.2.10"}', false);
 select t.act_as('gj_guest');
 select t.ok(public.record_install('30000000-0000-0000-0000-000000000091', 'ok',
-            'utm_source=facebook&utm_medium=paid_social') = 'meta', 'Gujarat ad install still recorded as meta');
+            'utm_source=apps.facebook.com&utm_campaign=fb4a&utm_content=%7B%22app%22%3A1790101855436439%2C%22t%22%3A1795090000%2C%22source%22%3A%7B%22data%22%3A%22ab%22%2C%22nonce%22%3A%22cd%22%7D%7D') = 'meta', 'Gujarat ad install still recorded as meta');
 select t.ok(public.user_source() = 'ads', 'attribution unchanged (reports and Meta stay correct)');
 select t.ok(public.geo_blocked(), 'Gujarat install is flagged');
 select t.ok(not public.has_ads_access(), 'Gujarat ad install: no ads access');
@@ -1341,12 +1344,12 @@ select t.ok(not public.has_ads_access() and public.can_see('organic'), 'Maharash
 
 select set_config('request.headers', '{"cf-connecting-ip": "198.51.100.20"}', false);
 select t.act_as('other_guest');
-select public.record_install('30000000-0000-0000-0000-000000000093', 'ok', 'utm_source=facebook');
+select public.record_install('30000000-0000-0000-0000-000000000093', 'ok', 'utm_source=apps.facebook.com&utm_campaign=fb4a&utm_content=%7B%22app%22%3A1790101855436439%2C%22t%22%3A1795090000%2C%22source%22%3A%7B%22data%22%3A%22ab%22%2C%22nonce%22%3A%22cd%22%7D%7D');
 select t.ok(public.has_ads_access() and not public.geo_blocked(), 'other states: ads install keeps ads access');
 
 select set_config('request.headers', '{"x-forwarded-for": "192.0.2.10", "cf-connecting-ip": "not-an-ip"}', false);
 select t.act_as('spoof_guest');
-select t.ok(public.record_install('30000000-0000-0000-0000-000000000094', 'ok', 'utm_source=facebook') = 'meta',
+select t.ok(public.record_install('30000000-0000-0000-0000-000000000094', 'ok', 'utm_source=apps.facebook.com&utm_campaign=fb4a&utm_content=%7B%22app%22%3A1790101855436439%2C%22t%22%3A1795090000%2C%22source%22%3A%7B%22data%22%3A%22ab%22%2C%22nonce%22%3A%22cd%22%7D%7D') = 'meta',
             'bad IP header does not break install');
 select t.ok(public.has_ads_access(), 'only cf-connecting-ip counts, not x-forwarded-for');
 
@@ -1361,8 +1364,9 @@ select t.ok(public.has_ads_access(), 'existing ads install keeps access');
 select t.act_as('gj_user');
 select public.record_install('30000000-0000-0000-0000-000000000095', 'not_available');
 select t.ok(public.request_full_access() = 'none', 'flagged user cannot queue an access request');
-select t.act_as('owner');
-select public.set_ads_access(t.id('gj_user'), 'approved');
+reset role;
+update public.profiles set ads_access_status = 'approved' where id = t.id('gj_user');
+set role authenticated;
 select t.act_as('gj_user');
 select t.ok(not public.has_ads_access() and not public.can_see('ads'), 'approval does not unlock ads content for flagged users');
 select set_config('request.headers', '', false);
@@ -1370,5 +1374,30 @@ reset role;
 select t.ok(not exists (select 1 from public.installs
                          where install_id = '30000000-0000-0000-0000-000000000003' and geo_blocked),
             'old install row not flagged afterwards');
+
+-- ---------------------------------------------------------------------------
+-- Only verified Meta ad installs get ads content.
+-- ---------------------------------------------------------------------------
+select t.ok(public.is_meta_ad_referrer('ok', 'utm_source=apps.facebook.com&utm_campaign=fb4a&utm_content=%7B%22app%22%3A1790101855436439%2C%22t%22%3A1795090000%2C%22source%22%3A%7B%22data%22%3A%22ab%22%2C%22nonce%22%3A%22cd%22%7D%7D'), 'Meta app-install referrer for our app is verified');
+select t.ok(not public.is_meta_ad_referrer('ok', 'utm_source=apps.facebook.com&utm_campaign=fb4a'),
+            'hand-made Facebook link without Meta data is not verified');
+select t.ok(not public.is_meta_ad_referrer('ok', 'utm_source=meta&utm_medium=paid_social&utm_campaign=x'),
+            'hand-made utm_source=meta Play link is not verified');
+select t.ok(not public.is_meta_ad_referrer('ok', replace('utm_source=apps.facebook.com&utm_campaign=fb4a&utm_content=%7B%22app%22%3A1790101855436439%2C%22t%22%3A1795090000%2C%22source%22%3A%7B%22data%22%3A%22ab%22%2C%22nonce%22%3A%22cd%22%7D%7D', '1790101855436439', '1111111111111111')),
+            'Meta referrer of another app is not verified');
+select t.ok(public.is_meta_ad_referrer('apk', 'utm_source=meta&utm_medium=paid_social&utm_campaign=apk_download'),
+            'the ads APK is verified');
+select t.ok(not public.is_meta_ad_referrer('not_available', null), 'organic APK is not verified');
+insert into t.ids values ('fake_link_guest', '00000000-0000-0000-0000-000000000096');
+insert into auth.users (id, email, is_anonymous) values (t.id('fake_link_guest'), null, true);
+set role authenticated;
+select set_config('request.headers', '{"cf-connecting-ip": "198.51.100.30"}', false);
+select t.act_as('fake_link_guest');
+select public.record_install('30000000-0000-0000-0000-000000000096', 'ok', 'utm_source=apps.facebook.com&utm_campaign=fb4a');
+select t.ok(not public.has_ads_access() and not public.can_see('ads') and public.can_see('organic'),
+            'a hand-made Facebook Play link gives organic content only');
+select t.ok(public.my_status()->>'source' = 'organic', 'the app treats a hand-made link install as organic');
+select set_config('request.headers', '', false);
+reset role;
 \echo
 \echo 'All tests passed.'
