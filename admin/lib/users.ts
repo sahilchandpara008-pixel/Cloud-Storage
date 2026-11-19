@@ -9,4 +9,8 @@ export type AppUser = {
   plan_ends_at: string | null;
   ads_access_status: "none" | "pending" | "approved" | "rejected";
   created_at: string;
+  purchases?: number;
+  spent_paise?: number;
+  last_purchase_at?: string | null;
+  total_count?: number;
 };

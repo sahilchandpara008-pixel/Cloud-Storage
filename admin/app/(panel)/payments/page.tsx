@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DatePresets } from "@/components/date-range";
 import {
   Badge,
   Button,
@@ -224,6 +225,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
     );
     body = (
       <>
+        <DatePresets
+          className="mb-3"
+          from={sp.from}
+          to={sp.to}
+          href={(f, t) => query({}, { view: "plans", from: f, to: t })}
+        />
         <form className="mb-4 flex flex-wrap items-end gap-3">
           <input type="hidden" name="view" value="plans" />
           {dateInputs}
@@ -445,6 +452,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             active: f.value === status,
           }))}
         />
+        <DatePresets className="mb-3" from={sp.from} to={sp.to} href={(f, t) => query(sp, { from: f, to: t })} />
         <form className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
           <input type="hidden" name="view" value="orders" />
           <input type="hidden" name="status" value={status} />

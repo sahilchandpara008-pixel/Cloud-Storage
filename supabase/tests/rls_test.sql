@@ -345,6 +345,7 @@ reset role;
 set role authenticated;
 select t.act_as('organic_user');
 select t.fails($$select * from public.admin_users()$$, 'app users cannot list users');
+select t.fails($$select public.admin_user_stats()$$, 'app users cannot read user reports');
 select t.fails($$select public.admin_dashboard()$$, 'app users cannot read the dashboard');
 select t.act_as('content_admin');
 select t.fails($$select * from public.admin_list_admins()$$, 'content admins cannot list admins');
@@ -357,6 +358,25 @@ select t.ok((select plan_name from public.admin_users() where id = t.id('organic
             'user list shows the active plan');
 select t.ok((select count(*) from public.admin_users('rejected')) = 1, 'filter by approval status');
 select t.ok((select count(*) from public.admin_users('all', 'staff@')) = 0, 'search does not return admins');
+select t.ok((select max(total_count) from public.admin_users('all', null, 2)) = 5,
+            'user list reports the total number of matches for paging');
+select t.ok((select count(*) from public.admin_users('all', null, 2)) = 2, 'user list pages');
+select t.ok((select count(*) from public.admin_users('premium')) = (public.admin_user_stats()->>'active_subscribers')::int,
+            'premium filter matches the active subscriber count');
+select t.ok((select count(*) from public.admin_users('all', null, 50, 0, now() + interval '1 day', null)) = 0,
+            'sign-up date range filters users');
+select t.ok((select count(*) from public.admin_users('registered')) + (select count(*) from public.admin_users('guest')) = 5,
+            'registered + guest = all users');
+select t.ok((public.admin_user_stats()->>'all_users')::int = 5
+            and (public.admin_user_stats()->>'new_users')::int = 5
+            and (public.admin_user_stats(now() + interval '1 day', null)->>'new_users')::int = 0,
+            'user stats count users in a date range');
+select t.ok(jsonb_array_length(public.admin_user_stats()->'by_plan') = (select count(*) from public.plans),
+            'user stats break subscribers down per plan');
+select t.ok((select array_agg(id order by created_at) from public.admin_users('all', null, 50, 0, null, null, 'oldest'))[1]
+              = (select id from public.profiles p where not exists (select 1 from public.admins a where a.user_id = p.id)
+                  order by created_at limit 1),
+            'oldest-first sort');
 select t.ok((select email from public.admin_list_admins() where role = 'content_admin') = 'staff@example.com',
             'owner lists admins with emails');
 select t.ok((select array_length(channel_ids, 1) from public.admin_list_admins() where role = 'content_admin') = 1,
