@@ -158,7 +158,7 @@ export async function reviewChannel(id: string, approve: boolean, formData: Form
     p_approve: approve,
     p_audience: audience,
   });
-  if (error) redirect(withMessage("/channels", "error", error.message));
+  if (error) redirect(withMessage("/channels?view=requests", "error", error.message));
   revalidatePath("/", "layout");
-  redirect(withMessage("/channels", "ok", approve ? "Channel approved. It's now visible in the app." : "Channel request rejected."));
+  redirect(withMessage("/channels?view=requests", "ok", approve ? "Channel approved. It's now visible in the app." : "Channel request rejected."));
 }

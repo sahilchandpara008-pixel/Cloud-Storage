@@ -1,5 +1,8 @@
-import { Badge, Button, Card, Empty, Flash, Input, PageHeader, SegmentTabs } from "@/components/ui";
+import Link from "next/link";
+import { DatePresets } from "@/components/date-range";
+import { Badge, Button, Card, Empty, Flash, Input, PageHeader, SegmentTabs, Select } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
+import { dayEnd, dayStart, isDate, rangeLabel } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
 import { closeRequest, deleteRequestedAccount } from "./actions";
 
@@ -20,14 +23,41 @@ type Req = {
 export default async function RequestsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; error?: string; status?: string }>;
+  searchParams: Promise<{
+    ok?: string;
+    error?: string;
+    status?: string;
+    kind?: string;
+    q?: string;
+    sort?: string;
+    from?: string;
+    to?: string;
+  }>;
 }) {
   const sp = await searchParams;
-  const status = sp.status === "closed" ? "closed" : "open";
-  const back = `/requests?status=${status}`;
+  const status = sp.status === "closed" ? "closed" : sp.status === "all" ? "all" : "open";
+  const kind = sp.kind === "delete_account" || sp.kind === "content_report" ? sp.kind : "";
+  const from = isDate(sp.from) ? sp.from : undefined;
+  const to = isDate(sp.to) ? sp.to : undefined;
+  const search = (sp.q ?? "").trim().replace(/[%_,()]/g, "");
+  const link = (patch: Record<string, string | undefined>) => {
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries({ status, kind, q: sp.q, sort: sp.sort, from, to, ...patch })) if (v) p.set(k, v);
+    return `/requests?${p.toString()}`;
+  };
+  const back = link({});
   const { supabase } = await requireOwner();
-  let q = supabase.from("support_requests").select("*").order("created_at", { ascending: false }).limit(300);
-  q = status === "open" ? q.eq("status", "open") : q.neq("status", "open");
+  let q = supabase
+    .from("support_requests")
+    .select("*")
+    .order("created_at", { ascending: sp.sort === "oldest" })
+    .limit(500);
+  if (status === "open") q = q.eq("status", "open");
+  if (status === "closed") q = q.neq("status", "open");
+  if (kind) q = q.eq("kind", kind);
+  if (search) q = q.or(`email.ilike.%${search}%,name.ilike.%${search}%,content_url.ilike.%${search}%`);
+  if (dayStart(from)) q = q.gte("created_at", dayStart(from)!);
+  if (dayEnd(to)) q = q.lt("created_at", dayEnd(to)!);
   const { data, error } = await q;
   const list = (data ?? []) as Req[];
 
@@ -43,15 +73,56 @@ export default async function RequestsPage({
         items={[
           ["open", "Open"],
           ["closed", "Closed"],
-        ].map(([v, l]) => ({ href: `/requests?status=${v}`, label: l, active: v === status }))}
+          ["all", "All"],
+        ].map(([v, l]) => ({ href: link({ status: v }), label: l, active: v === status }))}
       />
+      <DatePresets className="mb-3" from={from} to={to} href={(f, t) => link({ from: f, to: t })} />
+      <form className="mb-3 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+        <input type="hidden" name="status" value={status} />
+        <label className="flex min-w-44 flex-1 flex-col gap-1 text-xs font-medium text-gray-600">
+          Search
+          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Email, name or link" />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+          Type
+          <Select name="kind" defaultValue={kind} className="w-44">
+            <option value="">All types</option>
+            <option value="delete_account">Delete account</option>
+            <option value="content_report">Content report</option>
+          </Select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+          Sort by
+          <Select name="sort" defaultValue={sp.sort === "oldest" ? "oldest" : "newest"} className="w-36">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </Select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+          From
+          <Input type="date" name="from" defaultValue={from ?? ""} className="w-40" />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+          To
+          <Input type="date" name="to" defaultValue={to ?? ""} className="w-40" />
+        </label>
+        <div className="flex items-center gap-3">
+          <Button type="submit">Apply</Button>
+          <Link href="/requests" className="text-sm font-medium text-gray-500 hover:text-gray-800">
+            Reset
+          </Link>
+        </div>
+      </form>
+      <p className="mb-3 text-sm text-gray-500">
+        <b className="text-gray-800">{list.length}</b> request{list.length === 1 ? "" : "s"} · {rangeLabel(from, to)}
+      </p>
       <Card className="mb-4 text-sm text-gray-600">
         <b>Delete account:</b> press <b>Delete this account now</b> (removes the account, its cloud files and data),
         then reply to the user by email. We promise deletion within 7 days.{" "}
         <b>Reports:</b> check the content, hide or delete it under Posts / Channels, then mark done.
       </Card>
       {list.length === 0 ? (
-        <Empty>No {status} requests.</Empty>
+        <Empty>No requests match.</Empty>
       ) : (
         <div className="space-y-3">
           {list.map((r) => (

@@ -1,7 +1,32 @@
-import { Empty, Flash, LinkButton, Notice, PageHeader, SectionTitle, SourceBadge, Stat, Table, Td, Th } from "@/components/ui";
+import Link from "next/link";
+import { DatePresets } from "@/components/date-range";
+import {
+  Button,
+  Empty,
+  Flash,
+  Input,
+  LinkButton,
+  Notice,
+  PageHeader,
+  SectionTitle,
+  SourceBadge,
+  Stat,
+  Table,
+  Td,
+  Th,
+} from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
+import { dayEnd, dayStart, isDate, rangeLabel } from "@/lib/dates";
 
 type Stats = Record<string, number>;
+type Day = {
+  day: string;
+  installs_ads: number;
+  installs_organic: number;
+  purchases: number;
+  revenue_paise: number | null;
+};
+type Analytics = Record<string, number | null> & { daily?: Day[] };
 type ReportRow = {
   source: string;
   campaign: string;
@@ -10,61 +35,137 @@ type ReportRow = {
   buyers: number;
 };
 
+const n = (v: number | null | undefined) => Number(v ?? 0);
+const fmt = (v: number | null | undefined) => n(v).toLocaleString("en-IN");
+const pct = (part: number | null | undefined, whole: number | null | undefined) =>
+  n(whole) > 0 ? `${Math.round((n(part) / n(whole)) * 100)}%` : "—";
+const inr = (paise: number | null | undefined) =>
+  `₹${(n(paise) / 100).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+
+function dashUrl(from?: string, to?: string) {
+  const q = new URLSearchParams();
+  if (from) q.set("from", from);
+  if (to) q.set("to", to);
+  const s = q.toString();
+  return s ? `/?${s}` : "/";
+}
+
+// Installs per day (ads vs organic); a green dot marks days with a sale.
+function DailyChart({ days, showMoney }: { days: Day[]; showMoney: boolean }) {
+  const max = Math.max(1, ...days.map((d) => n(d.installs_ads) + n(d.installs_organic)));
+  return (
+    <div>
+      <div className="flex h-40 items-end gap-[3px] pt-2" role="img" aria-label="Installs per day, ads and organic">
+        {days.map((d) => {
+          const ads = n(d.installs_ads);
+          const org = n(d.installs_organic);
+          const label = new Date(`${d.day}T12:00:00+05:30`).toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+          });
+          return (
+            <div
+              key={d.day}
+              className="relative flex h-full min-w-0 flex-1 flex-col justify-end"
+              title={`${label}: ${ads} from ads, ${org} organic${d.purchases ? `, ${d.purchases} sale(s)` : ""}${
+                showMoney && d.revenue_paise ? ` (${inr(d.revenue_paise)})` : ""
+              }`}
+            >
+              <div className="w-full rounded-t-sm bg-blue-200" style={{ height: `${(org / max) * 100}%` }} />
+              <div className="w-full bg-purple-500" style={{ height: `${(ads / max) * 100}%` }} />
+              {d.purchases > 0 && (
+                <span className="absolute -top-2 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-green-600" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-1 flex justify-between text-[10px] text-gray-400">
+        <span>{days[0]?.day}</span>
+        <span>{days[days.length - 1]?.day}</span>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-4 text-xs text-gray-500">
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-purple-500" /> From ads</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-200" /> Organic</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-600" /> Day with a sale</span>
+        <span>Hover a bar for numbers</span>
+      </div>
+    </div>
+  );
+}
+
 export default async function Dashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; from?: string; to?: string }>;
 }) {
-  const { error } = await searchParams;
+  const sp = await searchParams;
+  const from = isDate(sp.from) ? sp.from : undefined;
+  const to = isDate(sp.to) ? sp.to : undefined;
   const { supabase, role } = await requireAdmin();
-  const { data } = await supabase.rpc("admin_dashboard");
-  const s = (data ?? {}) as Stats;
-
-  let report: ReportRow[] = [];
-  if (role === "owner") {
-    const { data: rows } = await supabase.rpc("attribution_report");
-    report = (rows ?? []) as ReportRow[];
-  }
-
-  // Same numbers as before; the rates are worked out from them. A tile
-  // links only where a page has the exact matching filter.
-  const n = (v: number | undefined) => Number(v ?? 0);
-  const fmt = (v: number | undefined) => n(v).toLocaleString("en-IN");
-  const pct = (part: number | undefined, whole: number | undefined) =>
-    n(whole) > 0 ? `${Math.round((n(part) / n(whole)) * 100)}%` : "—";
-  const installs = n(s.installs_ads) + n(s.installs_organic);
-  const adsShare = installs > 0 ? (n(s.installs_ads) / installs) * 100 : 0;
   const owner = role === "owner";
+
+  const range: Record<string, string> = {};
+  if (dayStart(from)) range.p_from = dayStart(from)!;
+  if (dayEnd(to)) range.p_to = dayEnd(to)!;
+
+  const [{ data }, { data: an }, { data: rows }] = await Promise.all([
+    supabase.rpc("admin_dashboard"),
+    supabase.rpc("admin_analytics", { p_from: dayStart(from), p_to: dayEnd(to) }),
+    owner ? supabase.rpc("attribution_report", range) : Promise.resolve({ data: [] }),
+  ]);
+  const s = (data ?? {}) as Stats;
+  const a = (an ?? {}) as Analytics;
+  const report = (rows ?? []) as ReportRow[];
+  const days = (a.daily ?? []) as Day[];
+  const label = rangeLabel(from, to);
+
+  const installs = n(a.installs);
+  const adsShare = installs > 0 ? (n(a.installs_ads) / installs) * 100 : 0;
+  const rangeQuery = `${from ? `&from=${from}` : ""}${to ? `&to=${to}` : ""}`;
 
   return (
     <>
       <PageHeader
         title="Dashboard"
-        subtitle="Overview of installs, users and content. All counts are all-time totals."
+        subtitle="Installs, users, subscriptions and content for the dates you pick."
         action={<LinkButton href="/posts/new">+ Upload content</LinkButton>}
       />
-      <Flash error={error === "owner_only" ? "That page is only available to the owner." : undefined} />
+      <Flash error={sp.error === "owner_only" ? "That page is only available to the owner." : undefined} />
 
-      {role === "owner" && (s.pending_channels > 0 || s.pending_approvals > 0) && (
-        <div className="mb-6 space-y-3">
-          {s.pending_channels > 0 && (
-            <Notice href="/channels">
-              {s.pending_channels} new channel request{s.pending_channels === 1 ? "" : "s"} to review
-            </Notice>
-          )}
-          {s.pending_approvals > 0 && (
-            <Notice href="/approvals" tone="red">
-              {s.pending_approvals} organic buyer{s.pending_approvals === 1 ? "" : "s"} waiting for approval
-            </Notice>
-          )}
+      {owner && s.pending_channels > 0 && (
+        <div className="mb-5">
+          <Notice href="/channels?view=requests&status=pending">
+            {s.pending_channels} new channel request{s.pending_channels === 1 ? "" : "s"} to review
+          </Notice>
         </div>
       )}
 
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <DatePresets from={from} to={to} href={dashUrl} />
+          <p className="mt-2 text-xs text-gray-500">
+            Showing <b className="text-gray-800">{label}</b>
+          </p>
+        </div>
+        <form className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+            From
+            <Input type="date" name="from" defaultValue={from ?? ""} className="w-40" />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+            To
+            <Input type="date" name="to" defaultValue={to ?? ""} className="w-40" />
+          </label>
+          <Button type="submit">Apply</Button>
+        </form>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm lg:col-span-1">
+        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="flex items-baseline justify-between">
             <h2 className="text-sm font-semibold text-gray-900">Installs</h2>
-            <span className="text-2xl font-semibold tabular-nums tracking-tight">{installs.toLocaleString("en-IN")}</span>
+            <span className="text-2xl font-semibold tabular-nums tracking-tight">{fmt(installs)}</span>
           </div>
           <div
             className="mt-4 flex h-2.5 overflow-hidden rounded-full bg-blue-100"
@@ -79,7 +180,7 @@ export default async function Dashboard({
                 <span className="h-2 w-2 rounded-full bg-purple-500" /> From ads
               </dt>
               <dd className="font-semibold tabular-nums">
-                {fmt(s.installs_ads)} <span className="text-xs font-normal text-gray-400">{pct(s.installs_ads, installs)}</span>
+                {fmt(a.installs_ads)} <span className="text-xs font-normal text-gray-400">{pct(a.installs_ads, installs)}</span>
               </dd>
             </div>
             <div>
@@ -87,37 +188,74 @@ export default async function Dashboard({
                 <span className="h-2 w-2 rounded-full bg-blue-200" /> Organic
               </dt>
               <dd className="font-semibold tabular-nums">
-                {fmt(s.installs_organic)}{" "}
-                <span className="text-xs font-normal text-gray-400">{pct(s.installs_organic, installs)}</span>
+                {fmt(a.installs_organic)}{" "}
+                <span className="text-xs font-normal text-gray-400">{pct(a.installs_organic, installs)}</span>
               </dd>
             </div>
           </dl>
+          <p className="mt-3 border-t border-gray-100 pt-2 text-xs text-gray-500">
+            {fmt(a.installs_ads_content)} ads installs get ads content · {fmt(a.installs_ads_geo)} blocked (Gujarat /
+            Maharashtra)
+          </p>
         </section>
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:col-span-2">
-          <Stat label="App users" value={fmt(s.users)} icon="♙" tone="blue" href={owner ? "/users" : undefined} />
-          <Stat label="Logged in" value={fmt(s.registered)} icon="✓" tone="green" hint={`${pct(s.registered, s.users)} of users`} />
           <Stat
-            label="Premium users"
-            value={fmt(s.premium)}
+            label="New users"
+            value={fmt(a.users)}
+            icon="♙"
+            tone="blue"
+            hint={`${fmt(a.registered)} logged in · ${fmt(a.guests)} guests`}
+            href={owner ? `/users?filter=all${rangeQuery}` : undefined}
+          />
+          <Stat
+            label="New subscribers"
+            value={fmt(a.new_subscribers)}
             icon="★"
             tone="amber"
-            hint={`${pct(s.premium, s.users)} of users`}
+            hint={`${fmt(a.purchases)} plans sold · ${fmt(a.active_subscribers)} active now`}
             href={owner ? "/users?filter=premium" : undefined}
           />
-          <Stat label="Channels" value={fmt(s.channels)} icon="▦" tone="brand" href="/channels" />
-          <Stat label="Published posts" value={fmt(s.posts_published)} icon="▶" tone="purple" href="/posts?status=published" />
-          <Stat label="Upload content" value="+" icon="⇪" tone="gray" hint="Single or bulk" href="/posts/new" />
+          {owner ? (
+            <Stat
+              label="Sales"
+              value={inr(a.revenue_paise)}
+              icon="₹"
+              tone="green"
+              hint={`${fmt(a.purchases)} payments`}
+              href={`/payments?view=plans${rangeQuery}`}
+            />
+          ) : (
+            <Stat label="Plans sold" value={fmt(a.purchases)} icon="₹" tone="green" />
+          )}
+          <Stat
+            label="Channel requests"
+            value={fmt(a.channels_requested)}
+            icon="▦"
+            tone="brand"
+            hint={`${fmt(a.channels_approved)} approved · ${fmt(a.channels_rejected)} rejected · ${fmt(a.channels_pending)} waiting`}
+            href={owner ? `/channels?view=requests${rangeQuery}` : undefined}
+          />
+          <Stat label="Posts published" value={fmt(a.posts_published)} icon="▶" tone="purple" href="/posts?status=published" />
+          <Stat label="Video views" value={fmt(a.video_views)} icon="◉" tone="gray" hint={`${fmt(a.preview_views)} preview views`} />
         </div>
       </div>
 
-      {role === "owner" && (
+      <section className="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-sm font-semibold text-gray-900">Installs per day</h2>
+          <span className="text-xs text-gray-400">{from || to ? label : "Last 30 days"} · up to 120 days shown</span>
+        </div>
+        {days.length === 0 ? <Empty>No days in this range.</Empty> : <DailyChart days={days} showMoney={owner} />}
+      </section>
+
+      {owner && (
         <section className="mt-8">
-          <SectionTitle action={<span className="text-xs text-gray-400">All time</span>}>
+          <SectionTitle action={<span className="text-xs text-gray-400">{label}</span>}>
             Installs by source and campaign
           </SectionTitle>
           {report.length === 0 ? (
-            <Empty>No installs yet. Campaign performance will appear here.</Empty>
+            <Empty>No installs in this range.</Empty>
           ) : (
             <Table>
               <thead>
@@ -133,7 +271,11 @@ export default async function Dashboard({
                 {report.map((r) => (
                   <tr key={`${r.source}-${r.campaign}`}>
                     <Td>
-                      {r.source === "meta" || r.source === "ads" ? <SourceBadge source="ads" /> : <span className="capitalize">{r.source}</span>}
+                      {r.source === "meta" || r.source === "ads" ? (
+                        <SourceBadge source="ads" />
+                      ) : (
+                        <span className="capitalize">{r.source}</span>
+                      )}
                     </Td>
                     <Td>{r.campaign || "—"}</Td>
                     <Td className="text-right tabular-nums">{r.installs}</Td>
@@ -144,6 +286,12 @@ export default async function Dashboard({
               </tbody>
             </Table>
           )}
+          <p className="mt-2 text-xs text-gray-400">
+            All time: {fmt(s.users)} users, {fmt(s.premium)} with an active plan, {fmt(s.channels)} channels.{" "}
+            <Link href="/users" className="underline">
+              Open Users
+            </Link>
+          </p>
         </section>
       )}
     </>

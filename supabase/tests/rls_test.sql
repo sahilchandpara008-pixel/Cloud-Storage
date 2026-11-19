@@ -1399,5 +1399,21 @@ select t.ok(not public.has_ads_access() and not public.can_see('ads') and public
 select t.ok(public.my_status()->>'source' = 'organic', 'the app treats a hand-made link install as organic');
 select set_config('request.headers', '', false);
 reset role;
+
+-- Dashboard analytics by date range.
+set role authenticated;
+select t.act_as('organic_user');
+select t.fails($$select public.admin_analytics()$$, 'app users cannot read analytics');
+select t.act_as('owner');
+select t.ok((public.admin_analytics()->>'installs')::int = (select count(*) from public.installs),
+            'analytics: all-time installs');
+select t.ok((public.admin_analytics()->>'installs_ads')::int + (public.admin_analytics()->>'installs_organic')::int
+              = (public.admin_analytics()->>'installs')::int, 'analytics: ads + organic = all installs');
+select t.ok((public.admin_analytics(now() + interval '1 day', null)->>'installs')::int = 0, 'analytics: date range filters');
+select t.ok(jsonb_array_length(public.admin_analytics()->'daily') between 30 and 32, 'analytics: daily series for all time = last 30 days');
+select t.ok(public.admin_analytics()->>'revenue_paise' is not null, 'owner sees revenue');
+select t.act_as('content_admin');
+select t.ok(public.admin_analytics()->>'revenue_paise' is null, 'content admins do not see revenue');
+reset role;
 \echo
 \echo 'All tests passed.'

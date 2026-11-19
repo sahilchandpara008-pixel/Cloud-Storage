@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DatePresets } from "@/components/date-range";
 import {
   AudienceBadge,
   Badge,
@@ -15,6 +16,7 @@ import {
   Th,
 } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
+import { dayEnd, dayStart, isDate } from "@/lib/dates";
 import { AUDIENCES, STATUSES, formatDate } from "@/lib/format";
 import { publicUrl } from "@/lib/supabase/browser";
 
@@ -45,7 +47,7 @@ function hiddenReason(p: Row, now: number) {
 export default async function PostsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; error?: string; channel?: string; folder?: string; audience?: string; status?: string; q?: string }>;
+  searchParams: Promise<{ ok?: string; error?: string; channel?: string; folder?: string; audience?: string; status?: string; q?: string; sort?: string; from?: string; to?: string }>;
 }) {
   const sp = await searchParams;
   const { supabase } = await requireAdmin();
@@ -55,8 +57,16 @@ export default async function PostsPage({
   let query = supabase
     .from("posts")
     .select("id, title, audience, status, published_at, view_count, channels(name), channel_folders(name), post_items(is_premium, thumb_key, position, processing_status)")
-    .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(300);
+  const from = isDate(sp.from) ? sp.from : undefined;
+  const to = isDate(sp.to) ? sp.to : undefined;
+  if (dayStart(from)) query = query.gte("created_at", dayStart(from)!);
+  if (dayEnd(to)) query = query.lt("created_at", dayEnd(to)!);
+  if (sp.sort === "oldest") query = query.order("created_at", { ascending: true });
+  else if (sp.sort === "views") query = query.order("view_count", { ascending: false });
+  else if (sp.sort === "title") query = query.order("title", { ascending: true });
+  else if (sp.sort === "published") query = query.order("published_at", { ascending: false, nullsFirst: false });
+  else query = query.order("created_at", { ascending: false });
   if (sp.channel) query = query.eq("channel_id", sp.channel);
   if (sp.folder) query = query.eq("folder_id", sp.folder);
   if (sp.audience) query = query.eq("audience", sp.audience);
@@ -84,7 +94,17 @@ export default async function PostsPage({
       />
       <Flash ok={sp.ok} error={sp.error} />
 
-      <form className="mb-4 grid gap-3 sm:grid-cols-5">
+      <DatePresets
+        className="mb-3"
+        from={isDate(sp.from) ? sp.from : undefined}
+        to={isDate(sp.to) ? sp.to : undefined}
+        href={(f, t) => {
+          const p = new URLSearchParams();
+          for (const [k, v] of Object.entries({ ...sp, ok: undefined, error: undefined, from: f, to: t })) if (v) p.set(k, v);
+          return `/posts?${p.toString()}`;
+        }}
+      />
+      <form className="mb-4 grid gap-3 sm:grid-cols-4 lg:grid-cols-8">
         <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search titles" aria-label="Search titles" />
         {sp.folder && <input type="hidden" name="folder" value={sp.folder} />}
         <Select name="channel" defaultValue={sp.channel ?? ""} aria-label="Channel">
@@ -105,6 +125,15 @@ export default async function PostsPage({
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </Select>
+        <Select name="sort" defaultValue={sp.sort ?? "newest"} aria-label="Sort">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+          <option value="published">Latest published</option>
+          <option value="views">Most views</option>
+          <option value="title">Title A–Z</option>
+        </Select>
+        <Input type="date" name="from" defaultValue={isDate(sp.from) ? sp.from : ""} aria-label="Uploaded from" title="Uploaded from" />
+        <Input type="date" name="to" defaultValue={isDate(sp.to) ? sp.to : ""} aria-label="Uploaded to" title="Uploaded to" />
         <Button variant="secondary" type="submit">Filter</Button>
       </form>
 
