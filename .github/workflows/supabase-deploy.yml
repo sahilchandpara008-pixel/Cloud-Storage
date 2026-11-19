@@ -1,8 +1,14 @@
 name: Supabase deploy
 
+# Manual only. Database changes and Edge Functions are applied to the live
+# project directly (Supabase dashboard / MCP), and the live migration history
+# uses different version numbers than the files here, so an automatic
+# `supabase db push` on every push would try to re-run old migrations. The
+# Bunny step would also overwrite live secrets with empty values for any
+# GitHub secret that is not set. Before running this by hand: add the
+# secrets below and align the history with `supabase migration repair`.
 on:
-  push:
-    paths: ["supabase/migrations/**", "supabase/functions/**", ".github/workflows/supabase-deploy.yml"]
+  workflow_dispatch:
 
 jobs:
   deploy:
