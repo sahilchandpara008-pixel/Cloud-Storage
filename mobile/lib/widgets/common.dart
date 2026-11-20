@@ -23,17 +23,17 @@ class CrownButton extends StatelessWidget {
             ),
           ),
           child: Container(
-            width: 38,
-            height: 38,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
-              color: const Color(0x26FFC24D),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0x80FFC24D)),
+              color: AppColors.chip,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: AppColors.border),
             ),
             child: const Icon(
               Icons.workspace_premium_rounded,
-              color: AppColors.gold,
-              size: 21,
+              color: AppColors.primary,
+              size: 22,
             ),
           ),
         ),
@@ -65,8 +65,8 @@ class EmptyState extends StatelessWidget {
               width: 88,
               height: 88,
               decoration: BoxDecoration(
-                gradient: AppColors.softGradient,
-                shape: BoxShape.circle,
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(28),
                 border: Border.all(color: AppColors.border),
               ),
               child: Icon(icon, size: 40, color: AppColors.primary),
@@ -211,30 +211,30 @@ class PremiumBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: compact ? 5 : 7,
-        vertical: compact ? 3 : 3.5,
+        horizontal: compact ? 4 : 8,
+        vertical: compact ? 4 : 4,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xB3000000),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0x66FFC24D), width: 0.8),
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(compact ? 8 : 7),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.workspace_premium_rounded,
-            size: compact ? 11 : 12,
-            color: AppColors.gold,
+            size: compact ? 13 : 12,
+            color: AppColors.ink,
           ),
           if (!compact) ...[
             const SizedBox(width: 3),
             const Text(
-              'Premium',
+              'PREMIUM',
               style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: AppColors.gold,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.3,
+                color: AppColors.ink,
                 height: 1.1,
               ),
             ),
@@ -254,9 +254,9 @@ class ThumbPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
       decoration: BoxDecoration(
-        color: const Color(0xCC000000),
+        color: const Color(0xBF000000),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
@@ -291,9 +291,9 @@ class PlayOverlay extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: const Color(0x66000000),
+        color: const Color(0xBF0A0A0C),
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xCCFFFFFF), width: 1.5),
+        border: Border.all(color: const Color(0x33FFFFFF)),
       ),
       child: Icon(
         Icons.play_arrow_rounded,
@@ -341,13 +341,14 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+      padding: const EdgeInsets.fromLTRB(20, 20, 12, 10),
       child: Row(
         children: [
           Expanded(
             child: Text(
               text,
               style: const TextStyle(
+                fontFamily: AppFonts.display,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.2,

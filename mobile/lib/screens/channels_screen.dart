@@ -79,20 +79,20 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
           title: const Text('Channels'),
           actions: const [CrownButton()],
           bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(100),
+            preferredSize: const Size.fromHeight(118),
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                   child: TextField(
                     decoration: const InputDecoration(
                       hintText: 'Search channels by name or topic',
                       prefixIcon: Icon(Icons.search_rounded),
-                      fillColor: AppColors.surfaceHigh,
+                      fillColor: AppColors.surface,
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: 14,
-                        vertical: 10,
+                        vertical: 13,
                       ),
                     ),
                     onChanged: (v) {
@@ -105,8 +105,8 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
                   ),
                 ),
                 Container(
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-                  padding: const EdgeInsets.all(3),
+                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(14),
@@ -114,21 +114,26 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
                   ),
                   child: TabBar(
                     indicatorSize: TabBarIndicatorSize.tab,
-                    labelColor: Colors.white,
+                    labelColor: AppColors.background,
                     unselectedLabelColor: AppColors.muted,
                     splashBorderRadius: BorderRadius.circular(10),
                     indicator: BoxDecoration(
-                      gradient: AppColors.gradient,
+                      color: AppColors.text,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     labelStyle: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13.5,
+                      fontFamily: AppFonts.body,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                     tabs: const [
-                      Tab(height: 32, text: 'Discover'),
-                      Tab(height: 32, text: 'Joined'),
+                      Tab(height: 38, text: 'Discover'),
+                      Tab(height: 38, text: 'Joined'),
                     ],
                   ),
                 ),
@@ -138,7 +143,7 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
         ),
         floatingActionButton: FloatingActionButton.extended(
           backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.ink,
           icon: const Icon(Icons.add),
           label: const Text('Create'),
           onPressed: () async {
@@ -179,8 +184,16 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
                                   selectedColor: AppColors.primary,
                                   labelStyle: TextStyle(
                                     color: sort == s.$1
-                                        ? Colors.white
-                                        : AppColors.text,
+                                        ? AppColors.ink
+                                        : const Color(0xFFD4D4D8),
+                                    fontWeight: sort == s.$1
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                                  side: BorderSide(
+                                    color: sort == s.$1
+                                        ? AppColors.primary
+                                        : AppColors.border,
                                   ),
                                   showCheckmark: false,
                                   onSelected: (_) {
@@ -227,77 +240,102 @@ class _ChannelsScreenState extends State<ChannelsScreen> with ContentReload {
     return RefreshIndicator(
       onRefresh: reload,
       child: ListView.separated(
-        padding: const EdgeInsets.only(top: 4, bottom: 80),
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 96),
         itemCount: channels.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 0),
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, i) {
           final c = channels[i];
           final isJoined = joinedIds.contains(c.id);
-          return ListTile(
-            dense: true,
-            minVerticalPadding: 6,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-            leading: ChannelAvatar(url: c.iconUrl, name: c.name, size: 42),
-            title: Text(
-              c.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+          return Material(
+            color: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: AppColors.borderSoft),
             ),
-            subtitle: DefaultTextStyle.merge(
-              style: const TextStyle(fontSize: 12, color: AppColors.muted),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.people_outline,
-                    size: 14,
-                    color: AppColors.muted,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChannelScreen(channelId: c.id),
                   ),
-                  Text(' ${formatCount(c.membersCount)} followers'),
-                ],
+                );
+                reload();
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    ChannelAvatar(url: c.iconUrl, name: c.name, size: 52),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            c.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${formatCount(c.membersCount)} followers',
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    isJoined
+                        ? OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(80, 38),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              disabledForegroundColor: const Color(0xFFD4D4D8),
+                              side: const BorderSide(color: Color(0xFF3A3A44)),
+                              textStyle: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            onPressed: null,
+                            child: const Text('Joined'),
+                          )
+                        : FilledButton(
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(72, 38),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              textStyle: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            onPressed: () => _join(c),
+                            child: const Text('Join'),
+                          ),
+                  ],
+                ),
               ),
             ),
-            trailing: isJoined
-                ? OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(76, 30),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      shape: const StadiumBorder(),
-                      disabledForegroundColor: AppColors.muted,
-                      side: const BorderSide(color: AppColors.border),
-                      textStyle: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    onPressed: null,
-                    child: const Text('Joined'),
-                  )
-                : OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(76, 30),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                      shape: const StadiumBorder(),
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      textStyle: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    onPressed: () => _join(c),
-                    child: const Text('Join'),
-                  ),
-            onTap: () async {
-              await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ChannelScreen(channelId: c.id),
-                ),
-              );
-              reload();
-            },
           );
         },
       ),

@@ -123,8 +123,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(28),
                         child: Image.asset(
                           'assets/logo.png',
-                          width: 104,
-                          height: 104,
+                          width: 96,
+                          height: 96,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        Config.appName,
+                        style: TextStyle(
+                          fontFamily: AppFonts.display,
+                          fontSize: 30,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.6,
                         ),
                       ),
                       if (widget.reason != null) ...[
@@ -156,10 +166,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     _AuthButton(
                       icon: const GoogleLogo(size: 24),
                       label: 'Sign in with google',
+                      light: true,
                       busy: _googleBusy,
                       onPressed: _googleBusy ? null : _google,
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 12),
                     _AuthButton(
                       icon: const Icon(Icons.email, size: 26),
                       label: 'Login with email',
@@ -210,12 +221,14 @@ class _AuthButton extends StatelessWidget {
   final Widget icon;
   final String label;
   final bool busy;
+  final bool light;
   final VoidCallback? onPressed;
   const _AuthButton({
     required this.icon,
     required this.label,
     required this.onPressed,
     this.busy = false,
+    this.light = false,
   });
 
   @override
@@ -223,11 +236,14 @@ class _AuthButton extends StatelessWidget {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.text,
-        backgroundColor: AppColors.surface,
+        foregroundColor: light ? AppColors.background : AppColors.text,
+        backgroundColor: light ? AppColors.text : AppColors.surface,
         minimumSize: const Size.fromHeight(56),
-        side: const BorderSide(color: AppColors.border, width: 1.2),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        side: BorderSide(
+          color: light ? AppColors.text : const Color(0xFF3A3A44),
+          width: 1.2,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         padding: const EdgeInsets.symmetric(horizontal: 20),
       ),
       child: Row(
@@ -239,7 +255,10 @@ class _AuthButton extends StatelessWidget {
                     child: SizedBox(
                       width: 22,
                       height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
                     ),
                   )
                 : Text(

@@ -103,9 +103,11 @@ class _PostScreenState extends State<PostScreen> {
               Text(
                 p.title,
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontFamily: AppFonts.display,
+                  fontSize: 26,
                   fontWeight: FontWeight.w700,
-                  height: 1.2,
+                  letterSpacing: -0.4,
+                  height: 1.15,
                 ),
               ),
               const SizedBox(height: 8),
@@ -203,7 +205,7 @@ class _Hero extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0x000B0B0D), AppColors.background],
+                    colors: [Color(0x000A0A0C), AppColors.background],
                   ),
                 ),
               ),
@@ -246,17 +248,23 @@ class _BigPlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 68,
-      height: 68,
-      decoration: BoxDecoration(
-        color: const Color(0x59000000),
+      width: 66,
+      height: 66,
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary, width: 2.5),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x73FF7A1A),
+            blurRadius: 30,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: const Icon(
         Icons.play_arrow_rounded,
-        color: Colors.white,
-        size: 42,
+        color: AppColors.ink,
+        size: 40,
       ),
     );
   }
@@ -346,15 +354,7 @@ class _MetaRow extends StatelessWidget {
       runSpacing: 6,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (item?.isPremium ?? false)
-          const Text(
-            'Premium',
-            style: TextStyle(
-              color: AppColors.gold,
-              fontSize: 13.5,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+        if (item?.isPremium ?? false) const PremiumBadge(),
         Text(parts.join('  ·  '), style: style),
         if (item?.isVideo ?? false)
           Container(
@@ -393,11 +393,9 @@ class _Buttons extends StatelessWidget {
       children: [
         FilledButton.icon(
           style: FilledButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-            minimumSize: const Size.fromHeight(48),
+            minimumSize: const Size.fromHeight(52),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(14),
             ),
             textStyle: const TextStyle(
               fontSize: 16,
@@ -429,11 +427,12 @@ class _Buttons extends StatelessWidget {
           const SizedBox(height: 10),
           FilledButton.icon(
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.surfaceHigh,
+              backgroundColor: AppColors.surface,
               foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
+              minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: AppColors.border),
               ),
               textStyle: const TextStyle(
                 fontSize: 16,
@@ -636,11 +635,15 @@ class _MoreFromCreator extends StatelessWidget {
             children: [
               Text(
                 'More Like This',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontFamily: AppFonts.display,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               SizedBox(height: 6),
               SizedBox(
-                width: 92,
+                width: 40,
                 height: 3,
                 child: ColoredBox(color: AppColors.primary),
               ),
@@ -709,11 +712,7 @@ class _Poster extends StatelessWidget {
                 const Positioned(
                   top: 6,
                   left: 6,
-                  child: Icon(
-                    Icons.workspace_premium_rounded,
-                    color: AppColors.gold,
-                    size: 18,
-                  ),
+                  child: PremiumBadge(compact: true),
                 ),
               if (cover?.hasTrailer ?? false)
                 const Positioned(

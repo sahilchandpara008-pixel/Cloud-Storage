@@ -60,7 +60,7 @@ class PostBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final cover = post.cover;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -73,13 +73,20 @@ class PostBubble extends StatelessWidget {
           children: [
             // Header: channel + menu
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+              padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
               child: Row(
                 children: [
-                  ChannelAvatar(
-                    url: post.channelIcon,
-                    name: post.channelName,
-                    size: 36,
+                  Container(
+                    padding: const EdgeInsets.all(1.5),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: ChannelAvatar(
+                      url: post.channelIcon,
+                      name: post.channelName,
+                      size: 35,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -107,14 +114,18 @@ class PostBubble extends StatelessWidget {
               ),
             ),
             if (cover != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+              DecoratedBox(
+                decoration: const BoxDecoration(
+                  border: Border.symmetric(
+                    horizontal: BorderSide(color: AppColors.border),
+                  ),
+                ),
                 child: GestureDetector(
                   onTap: () => post.items.length > 1
                       ? _openPost(context)
                       : openItem(context, post, cover),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.zero,
                     child: AspectRatio(
                       aspectRatio: 16 / 9,
                       child: Stack(
@@ -132,11 +143,11 @@ class PostBubble extends StatelessWidget {
                             ),
                           ),
                           if (cover.isVideo)
-                            const Center(child: PlayOverlay(size: 54)),
+                            const Center(child: PlayOverlay(size: 56)),
                           if (cover.isPremium)
                             const Positioned(
                               top: 10,
-                              right: 10,
+                              left: 10,
                               child: PremiumBadge(),
                             ),
                           if (cover.isVideo &&
@@ -165,7 +176,7 @@ class PostBubble extends StatelessWidget {
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -173,7 +184,7 @@ class PostBubble extends StatelessWidget {
                     Text(
                       post.title,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
                         height: 1.3,
                       ),

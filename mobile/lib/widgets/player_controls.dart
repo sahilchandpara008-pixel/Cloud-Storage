@@ -600,12 +600,11 @@ class _RoundButton extends StatelessWidget {
       label: tooltip,
       button: true,
       child: Material(
-        color: filled ? const Color(0x80000000) : const Color(0x66000000),
+        color: filled ? AppColors.primary : const Color(0x730A0A0C),
         shape: CircleBorder(
-          side: BorderSide(
-            color: filled ? const Color(0x99FFFFFF) : const Color(0x55FFFFFF),
-            width: filled ? 1.6 : 1.2,
-          ),
+          side: filled
+              ? BorderSide.none
+              : const BorderSide(color: Color(0x33FFFFFF)),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -613,7 +612,11 @@ class _RoundButton extends StatelessWidget {
           child: SizedBox(
             width: size,
             height: size,
-            child: Icon(icon, color: Colors.white, size: size * 0.55),
+            child: Icon(
+              icon,
+              color: filled ? AppColors.ink : Colors.white,
+              size: size * 0.55,
+            ),
           ),
         ),
       ),
@@ -631,8 +634,9 @@ class _Pill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0x99000000),
-        borderRadius: BorderRadius.circular(24),
+        color: const Color(0xB30A0A0C),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0x33FFFFFF)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

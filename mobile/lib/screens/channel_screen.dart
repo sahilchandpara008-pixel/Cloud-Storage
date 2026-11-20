@@ -128,6 +128,7 @@ class _ChannelScreenState extends State<ChannelScreen> {
           child: SizedBox.expand(),
         ),
         titleSpacing: 0,
+        toolbarHeight: 68,
         title: c == null
             ? const Text('Channel')
             : Row(
@@ -139,7 +140,18 @@ class _ChannelScreenState extends State<ChannelScreen> {
                       onChanged: _load,
                     )
                   else
-                    ChannelAvatar(url: c.iconUrl, name: c.name, size: 44),
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: ChannelAvatar(
+                        url: c.iconUrl,
+                        name: c.name,
+                        size: 44,
+                      ),
+                    ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -148,26 +160,20 @@ class _ChannelScreenState extends State<ChannelScreen> {
                         Text(
                           c.name,
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontFamily: AppFonts.display,
+                            fontSize: 21,
                             fontWeight: FontWeight.w700,
+                            letterSpacing: -0.3,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.people_outline,
-                              size: 18,
-                              color: Colors.white,
-                            ),
-                            Text(
-                              ' ${formatCount(c.membersCount)} followers',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 1),
+                        Text(
+                          '${formatCount(c.membersCount)} followers',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: AppColors.muted,
+                          ),
                         ),
                       ],
                     ),
@@ -224,7 +230,7 @@ class _ChannelScreenState extends State<ChannelScreen> {
       floatingActionButton: isCreator && approved
           ? FloatingActionButton(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.ink,
               tooltip: 'New post',
               onPressed: () async {
                 final posted = await Navigator.of(context).push<bool>(
@@ -296,15 +302,27 @@ class _ChannelScreenState extends State<ChannelScreen> {
                         ),
                 ),
                 if (!joined && approved)
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: _join,
-                          child: const Text('Join'),
+                  DecoratedBox(
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      border: Border(
+                        top: BorderSide(color: AppColors.border),
+                      ),
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(0, 52),
+                            ),
+                            onPressed: _join,
+                            icon: const Icon(Icons.add_rounded),
+                            label: const Text('Join channel'),
+                          ),
                         ),
                       ),
                     ),
@@ -323,7 +341,13 @@ class _ChannelScreenState extends State<ChannelScreen> {
         selected: selected,
         showCheckmark: false,
         selectedColor: AppColors.primary,
-        labelStyle: TextStyle(color: selected ? Colors.white : AppColors.text),
+        labelStyle: TextStyle(
+          color: selected ? AppColors.ink : const Color(0xFFD4D4D8),
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+        ),
+        side: BorderSide(
+          color: selected ? AppColors.primary : AppColors.border,
+        ),
         onSelected: (_) => setState(() => folderId = id),
       ),
     );

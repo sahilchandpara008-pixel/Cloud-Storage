@@ -111,41 +111,110 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             PremiumScreen(),
           ],
         ),
-        bottomNavigationBar: DecoratedBox(
-          decoration: const BoxDecoration(
-            border: Border(top: BorderSide(color: AppColors.border)),
-          ),
-          child: NavigationBar(
-            selectedIndex: index,
-            onDestinationSelected: (i) => app.tab.value = i,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.cloud_upload_outlined),
-                selectedIcon: Icon(Icons.cloud_upload),
-                label: 'Cloud',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.public_outlined),
-                selectedIcon: Icon(Icons.public),
-                label: 'Feed',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.search),
-                selectedIcon: Icon(Icons.manage_search),
-                label: 'Explore',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.live_tv_outlined),
-                selectedIcon: Icon(Icons.live_tv),
-                label: 'Channels',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Profile',
+        bottomNavigationBar: _FloatingNav(
+          index: index,
+          onSelect: (i) => app.tab.value = i,
+        ),
+      ),
+    );
+  }
+}
+
+/// Floating bottom bar: Cloud · Feed · Explore (centre pill) · Channels ·
+/// Profile. Same five tabs and indices as before; only the look changed.
+class _FloatingNav extends StatelessWidget {
+  final int index;
+  final ValueChanged<int> onSelect;
+  const _FloatingNav({required this.index, required this.onSelect});
+
+  static const _items = [
+    (Icons.cloud_outlined, Icons.cloud_rounded, 'Cloud'),
+    (Icons.public_outlined, Icons.public, 'Feed'),
+    (Icons.search_rounded, Icons.search_rounded, 'Explore'),
+    (Icons.live_tv_outlined, Icons.live_tv_rounded, 'Channels'),
+    (Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+        child: Container(
+          height: 68,
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: AppColors.border),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x99000000),
+                blurRadius: 24,
+                offset: Offset(0, 8),
               ),
             ],
           ),
+          child: Row(
+            children: [
+              for (var i = 0; i < _items.length; i++)
+                Expanded(child: _navItem(i)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navItem(int i) {
+    final (icon, activeIcon, label) = _items[i];
+    final selected = i == index;
+    final centre = i == 2;
+    final color = centre
+        ? (selected ? AppColors.ink : const Color(0xFFD4D4D8))
+        : (selected ? AppColors.primary : AppColors.subtle);
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(selected ? activeIcon : icon, size: 23, color: color),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.fade,
+          softWrap: false,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            color: color,
+          ),
+        ),
+      ],
+    );
+    return Semantics(
+      label: label,
+      selected: selected,
+      button: true,
+      child: InkResponse(
+        onTap: () => onSelect(i),
+        radius: 34,
+        child: Center(
+          child: centre
+              ? AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 66,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.primary
+                        : AppColors.surfaceHigh,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(child: content),
+                )
+              : content,
         ),
       ),
     );

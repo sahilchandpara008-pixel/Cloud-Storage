@@ -73,7 +73,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     _debounce?.cancel();
                     setState(() => query = v.trim());
                   },
-                  style: const TextStyle(fontFamily: 'Poppins', fontSize: 16),
+                  style: const TextStyle(fontFamily: AppFonts.body, fontSize: 16),
                   decoration: const InputDecoration(
                     hintText: 'Search videos, shows, channels',
                     filled: false,
@@ -82,7 +82,36 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     focusedBorder: InputBorder.none,
                   ),
                 )
-              : const Text('Explore'),
+              : Semantics(
+                  header: true,
+                  label: 'Explore',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          width: 34,
+                          height: 34,
+                          excludeFromSemantics: true,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const ExcludeSemantics(
+                        child: Text(
+                          'Flixvault',
+                          style: TextStyle(
+                            fontFamily: AppFonts.display,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
           actions: searching
               ? [
                   IconButton(
@@ -129,31 +158,54 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 tabAlignment: TabAlignment.start,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-                labelColor: Colors.white,
-                unselectedLabelColor: AppColors.muted,
+                labelColor: AppColors.ink,
+                unselectedLabelColor: const Color(0xFFD4D4D8),
                 indicatorSize: TabBarIndicatorSize.tab,
-                splashBorderRadius: BorderRadius.circular(20),
+                splashBorderRadius: BorderRadius.circular(999),
                 indicator: BoxDecoration(
-                  gradient: AppColors.gradient,
-                  borderRadius: BorderRadius.circular(20),
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 labelStyle: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
+                  fontFamily: AppFonts.body,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
                 ),
                 unselectedLabelStyle: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13.5,
+                  fontFamily: AppFonts.body,
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
                 tabs: [
-                  for (final t in tabs)
+                  for (var i = 0; i < tabs.length; i++)
                     Tab(
-                      height: 34,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: Text(t.$2),
+                      height: 38,
+                      // Outline only on the tabs that aren't selected; the
+                      // selected one is the solid orange indicator.
+                      child: Builder(
+                        builder: (context) {
+                          final tc = DefaultTabController.of(context);
+                          return AnimatedBuilder(
+                            animation: tc,
+                            builder: (_, child) => Container(
+                              height: 38,
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: tc.index == i
+                                      ? AppColors.primary
+                                      : AppColors.border,
+                                ),
+                              ),
+                              child: child,
+                            ),
+                            child: Text(tabs[i].$2),
+                          );
+                        },
                       ),
                     ),
                 ],
@@ -407,6 +459,7 @@ void _openPost(BuildContext context, Post post) => Navigator.of(context).push(
 );
 
 /// Big featured card (same tap as any other post).
+/// Big featured card (same tap as any other post).
 class _Hero extends StatelessWidget {
   final Post post;
   const _Hero({required this.post});
@@ -415,6 +468,7 @@ class _Hero extends StatelessWidget {
   Widget build(BuildContext context) {
     final cover = post.cover;
     final duration = cover?.durationS;
+    final isVideo = cover?.isVideo == true;
     return Semantics(
       label: post.title,
       button: true,
@@ -422,26 +476,27 @@ class _Hero extends StatelessWidget {
         child: GestureDetector(
           onTap: () => _openPost(context, post),
           child: AspectRatio(
-            aspectRatio: 16 / 10,
+            aspectRatio: 16 / 10.5,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppColors.border),
                 boxShadow: const [
                   BoxShadow(
-                    color: Color(0x40FF6A00),
-                    blurRadius: 30,
-                    offset: Offset(0, 10),
+                    color: Color(0x33FF6A00),
+                    blurRadius: 34,
+                    offset: Offset(0, 12),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(21),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
                     NetThumb(
                       url: cover?.thumbUrl,
-                      fallback: cover?.isVideo == true
+                      fallback: isVideo
                           ? Icons.movie_outlined
                           : Icons.image_outlined,
                     ),
@@ -450,78 +505,95 @@ class _Hero extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Color(0x00000000), Color(0xE6000000)],
-                          stops: [0.35, 1],
+                          colors: [Color(0x00000000), Color(0xF20A0A0C)],
+                          stops: [0.3, 1],
                         ),
                       ),
                     ),
-                    if (post.hasPremium)
-                      const Positioned(
-                        top: 12,
-                        right: 12,
-                        child: PremiumBadge(),
-                      ),
                     Positioned(
-                      left: 16,
-                      right: 16,
-                      bottom: 14,
+                      top: 14,
+                      left: 14,
+                      right: 14,
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  post.channelName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Color(0xCCFFFFFF),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  post.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 19,
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          if (cover?.isVideo == true)
-                            Container(
-                              width: 46,
-                              height: 46,
-                              decoration: const BoxDecoration(
-                                gradient: AppColors.gradient,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 30,
-                              ),
-                            ),
+                          if (post.hasPremium) const PremiumBadge(),
+                          const Spacer(),
+                          if (duration != null && duration > 0)
+                            ThumbPill(formatDuration(duration)),
                         ],
                       ),
                     ),
-                    if (duration != null && duration > 0)
-                      Positioned(
-                        top: 12,
-                        left: 12,
-                        child: ThumbPill(formatDuration(duration)),
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 16,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            post.channelName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: AppColors.muted,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            post.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: AppFonts.display,
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.3,
+                              height: 1.15,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          // Looks like a button; does the same as tapping
+                          // the card.
+                          ExcludeSemantics(
+                            child: Container(
+                              height: 42,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 18,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isVideo
+                                        ? Icons.play_arrow_rounded
+                                        : Icons.open_in_full_rounded,
+                                    color: AppColors.ink,
+                                    size: isVideo ? 24 : 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isVideo ? 'Watch now' : 'Open',
+                                    style: const TextStyle(
+                                      color: AppColors.ink,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -555,17 +627,11 @@ class _Tile extends StatelessWidget {
                 aspectRatio: 16 / 9,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(Radii.card),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x80000000),
-                        blurRadius: 14,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(Radii.card),
+                    borderRadius: BorderRadius.circular(13),
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
@@ -619,7 +685,7 @@ class _Tile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     height: 1.3,
                   ),
                 ),
@@ -631,7 +697,7 @@ class _Tile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 12,
                     color: AppColors.muted,
                   ),
                 ),

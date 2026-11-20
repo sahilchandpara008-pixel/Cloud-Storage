@@ -183,7 +183,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       builder: (_) => AlertDialog(
         icon: const Icon(
           Icons.workspace_premium_rounded,
-          color: AppColors.gold,
+          color: AppColors.primary,
           size: 40,
         ),
         title: const Text('Enjoyed the trailer?'),
@@ -283,12 +283,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     const SizedBox(height: 10),
                     DecoratedBox(
                       decoration: BoxDecoration(
-                        gradient: AppColors.gradient,
+                        color: AppColors.primary,
                         borderRadius: BorderRadius.circular(Radii.button),
                       ),
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.transparent,
+                          foregroundColor: AppColors.ink,
                           shadowColor: Colors.transparent,
                           minimumSize: const Size.fromHeight(52),
                         ),
@@ -378,8 +379,11 @@ class _SkipButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xCC000000),
-      shape: const StadiumBorder(side: BorderSide(color: Color(0x88FFFFFF))),
+      color: const Color(0x990A0A0C),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0x59FFFFFF)),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,

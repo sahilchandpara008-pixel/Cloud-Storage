@@ -165,18 +165,53 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen>
         padding: const EdgeInsets.all(24),
         children: [
           const SizedBox(height: 16),
-          Icon(icon, size: 88, color: color),
-          const SizedBox(height: 20),
+          Center(
+            child: Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.28),
+                    blurRadius: 40,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Icon(icon, size: 56, color: color),
+            ),
+          ),
+          const SizedBox(height: 22),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              fontFamily: AppFonts.display,
+              fontSize: 21,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              height: 1.3,
+            ),
           ),
           const SizedBox(height: 24),
-          _Row('Order number', widget.order.reference),
-          _Row('Plan', o?.planName ?? widget.order.planName),
-          _Row('Amount', o?.amountLabel ?? '₹${widget.order.amount}'),
-          if (o?.txnId != null) _Row('UTR', o!.txnId!),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: [
+                _Row('Order number', widget.order.reference),
+                _Row('Plan', o?.planName ?? widget.order.planName),
+                _Row('Amount', o?.amountLabel ?? '₹${widget.order.amount}'),
+                if (o?.txnId != null) _Row('UTR', o!.txnId!),
+              ],
+            ),
+          ),
           if (error != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
@@ -234,12 +269,12 @@ class _Row extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(color: AppColors.muted, fontSize: 15),
+              style: const TextStyle(color: AppColors.muted, fontSize: 14),
             ),
             const Spacer(),
             SelectableText(
               value,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
           ],
         ),

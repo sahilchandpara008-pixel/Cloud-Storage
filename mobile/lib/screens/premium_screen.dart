@@ -129,7 +129,16 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
         title: const Text('Premium'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_circle_outlined, size: 32),
+            icon: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppColors.chip,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Icon(Icons.person_outline_rounded, size: 24),
+            ),
             tooltip: 'Profile',
             onPressed: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const ProfileScreen())),
@@ -201,12 +210,17 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
               if (!app.noPlans) ...[
                 Container(
                   decoration: BoxDecoration(
-                    gradient: AppColors.gradient,
-                    borderRadius: BorderRadius.circular(24),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF3A1A06), Color(0xFF16110D)],
+                    ),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: const Color(0x59FF7A1A)),
                     boxShadow: const [
                       BoxShadow(
-                        color: Color(0x40FF7A1A),
-                        blurRadius: 24,
+                        color: Color(0x26FF7A1A),
+                        blurRadius: 28,
                         offset: Offset(0, 10),
                       ),
                     ],
@@ -221,8 +235,8 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.gold,
-                          borderRadius: BorderRadius.circular(20),
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(999),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
@@ -254,13 +268,13 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
                                 width: 26,
                                 height: 26,
                                 decoration: const BoxDecoration(
-                                  color: Color(0x33FFFFFF),
+                                  color: Color(0x33FF7A1A),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 18,
+                                  Icons.check_rounded,
+                                  color: AppColors.primary,
+                                  size: 17,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -268,8 +282,8 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
                                 child: Text(
                                   perk,
                                   style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.white,
+                                    fontSize: 15.5,
+                                    color: AppColors.text,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -295,8 +309,19 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 FilledButton(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(54),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    textStyle: const TextStyle(
+                      fontFamily: AppFonts.body,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   onPressed: sending || selected == null ? null : _next,
                   child: Text(
                     sending
@@ -331,16 +356,16 @@ class _PlanCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF261A10) : AppColors.surface,
-            borderRadius: BorderRadius.circular(18),
+            color: selected ? const Color(0x1AFF7A1A) : AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: selected ? AppColors.primary : AppColors.border,
-              width: selected ? 2 : 1.2,
+              width: selected ? 1.6 : 1,
             ),
             boxShadow: selected
                 ? const [
@@ -362,14 +387,15 @@ class _PlanCard extends StatelessWidget {
                     Text(
                       plan.name,
                       style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       plan.durationLabel,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 13,
                         color: AppColors.muted,
                       ),
                     ),
@@ -379,11 +405,12 @@ class _PlanCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(right: 12),
                 child: Text(
-                  '₹ ${plan.priceInr}',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary,
+                  '₹${plan.priceInr}',
+                  style: TextStyle(
+                    fontFamily: AppFonts.display,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
+                    color: selected ? AppColors.primary : AppColors.text,
                   ),
                 ),
               ),
@@ -408,7 +435,8 @@ class _Banner extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0x14FFFFFF)),
       ),
       child: Row(
         children: [

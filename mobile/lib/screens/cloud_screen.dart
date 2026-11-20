@@ -373,7 +373,7 @@ class _CloudScreenState extends State<CloudScreen> with ContentReload {
             ),
             floatingActionButton: FloatingActionButton(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: AppColors.ink,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
