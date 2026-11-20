@@ -18,11 +18,31 @@ type BunnyAuth = {
   authorizationExpire: number;
 };
 
+// Videos go up in 32 MB pieces. Sending a 300 MB file as one request meant a
+// single dropped connection lost the whole upload ("failed to upload chunk at
+// offset 0"); now only the current piece is sent again and the upload goes on
+// from where it stopped. Network drops are retried for about 3 minutes.
+const CHUNK_BYTES = 32 * 1024 * 1024;
+const RETRY_DELAYS = [0, 2000, 5000, 10000, 15000, 30000, 30000, 30000, 60000];
+
+function friendlyTusError(err: Error) {
+  const text = err?.message ?? String(err);
+  if (/response code: n\/a|ProgressEvent|network/i.test(text)) {
+    return new Error(
+      "The connection to the video server dropped and didn't come back after several tries. " +
+        "Check your internet, then press Try again.",
+    );
+  }
+  return err;
+}
+
 function tusUpload(file: File, auth: BunnyAuth, onProgress: (pct: number) => void) {
   return new Promise<void>((resolve, reject) => {
     const upload = new TusUpload(file, {
       endpoint: "https://video.bunnycdn.com/tusupload",
-      retryDelays: [0, 1000, 3000, 5000],
+      chunkSize: CHUNK_BYTES,
+      retryDelays: RETRY_DELAYS,
+      removeFingerprintOnSuccess: true,
       headers: {
         AuthorizationSignature: auth.authorizationSignature,
         AuthorizationExpire: String(auth.authorizationExpire),
@@ -30,7 +50,7 @@ function tusUpload(file: File, auth: BunnyAuth, onProgress: (pct: number) => voi
         LibraryId: auth.libraryId,
       },
       metadata: { filetype: file.type, title: file.name },
-      onError: reject,
+      onError: (err) => reject(friendlyTusError(err)),
       onProgress: (sent, total) => onProgress(Math.round((sent / total) * 100)),
       onSuccess: () => resolve(),
     });

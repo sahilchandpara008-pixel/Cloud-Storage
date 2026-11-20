@@ -72,7 +72,8 @@ Deno.serve(async (req) => {
   const created = await createRes.json();
   const videoId = created.guid as string;
 
-  const authorizationExpire = Math.floor(Date.now() / 1000) + 3600; // 1 hour to finish the upload
+  // 6 hours to finish the upload (large videos on slow or flaky connections).
+  const authorizationExpire = Math.floor(Date.now() / 1000) + 6 * 3600;
   const authorizationSignature = await sha256Hex(`${libraryId}${apiKey}${authorizationExpire}${videoId}`);
 
   return json({
