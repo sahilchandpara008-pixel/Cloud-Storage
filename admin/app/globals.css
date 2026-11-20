@@ -96,3 +96,115 @@ textarea {
 .toast-in {
   animation: toast-in 0.18s ease-out;
 }
+
+/* ------------------------------------------------------------------ admin
+   Dark admin look (same as the app): black, orange accent, Inter text and
+   Space Grotesk headings. Scoped to .admin-theme (the admin shell and the
+   login page) so the public website pages keep their light look. The colour
+   scales are flipped here, so every page's existing classes follow. */
+.admin-theme {
+  color-scheme: dark;
+  background: #0a0a0c;
+  color: #f4f4f6;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --color-gray-50: #0f0f12;
+  --color-gray-100: #17171c;
+  --color-gray-200: #26262e;
+  --color-gray-300: #3a3a44;
+  --color-gray-400: #6b6b75;
+  --color-gray-500: #8a8a94;
+  --color-gray-600: #a1a1aa;
+  --color-gray-700: #c4c4cc;
+  --color-gray-800: #e4e4e7;
+  --color-gray-900: #f4f4f6;
+
+  --color-brand-50: #2a1608;
+  --color-brand-100: #3a1d08;
+  --color-brand-200: #5c2e0e;
+  --color-brand-300: #ffb37a;
+  --color-brand-400: #ff9a4d;
+  --color-brand-600: #ff8a3d;
+  --color-brand-700: #ff8a3d;
+  --color-brand-800: #ffb37a;
+
+  --color-red-50: #2b1414;
+  --color-red-100: #3a1717;
+  --color-red-200: #5c2020;
+  --color-red-300: #7a2a2a;
+  --color-red-700: #f87171;
+  --color-red-800: #fca5a5;
+  --color-red-900: #fecaca;
+
+  --color-green-50: #0f2219;
+  --color-green-100: #12301f;
+  --color-green-200: #1b4d33;
+  --color-green-600: #34d399;
+  --color-green-700: #34d399;
+  --color-green-800: #6ee7b7;
+  --color-green-900: #a7f3d0;
+
+  --color-amber-50: #2a1f10;
+  --color-amber-100: #3a2a12;
+  --color-amber-200: #5c4316;
+  --color-amber-700: #f5b400;
+  --color-amber-800: #fcd34d;
+  --color-amber-900: #fde68a;
+
+  --color-blue-50: #111a2e;
+  --color-blue-100: #15213a;
+  --color-blue-200: #1e3358;
+  --color-blue-700: #93c5fd;
+  --color-blue-800: #bfdbfe;
+  --color-blue-900: #dbeafe;
+
+  --color-purple-50: #1e1530;
+  --color-purple-100: #271b3d;
+  --color-purple-700: #c4b5fd;
+  --color-purple-800: #ddd6fe;
+
+  --color-orange-50: #2a1608;
+}
+html:has(.admin-theme),
+body:has(.admin-theme) {
+  background: #0a0a0c;
+}
+.admin-theme h1,
+.admin-theme h2 {
+  font-family: var(--font-display), var(--font-inter), ui-sans-serif, sans-serif;
+  letter-spacing: -0.01em;
+}
+.admin-theme .bg-white {
+  background-color: #141418;
+}
+.admin-theme .bg-white\/95 {
+  background-color: rgb(20 20 24 / 0.95);
+}
+.admin-theme .hover\:bg-white\/70:hover {
+  background-color: rgb(31 31 37 / 0.8);
+}
+.admin-theme .shadow-sm {
+  box-shadow: none;
+}
+.admin-theme input[type="checkbox"],
+.admin-theme input[type="radio"] {
+  accent-color: #ff7a1a;
+}
+.admin-theme ::selection {
+  background: #5c2e0e;
+  color: #ffe7d4;
+}
+.admin-theme :focus-visible {
+  outline-color: #ff7a1a;
+}
+.admin-theme input,
+.admin-theme select,
+.admin-theme textarea {
+  color-scheme: dark;
+}
+.admin-theme .font-display {
+  font-family: var(--font-display), var(--font-inter), ui-sans-serif, sans-serif;
+}
+.admin-theme .font-sans {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}

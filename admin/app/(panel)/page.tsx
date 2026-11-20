@@ -71,8 +71,8 @@ function DailyChart({ days, showMoney }: { days: Day[]; showMoney: boolean }) {
                 showMoney && d.revenue_paise ? ` (${inr(d.revenue_paise)})` : ""
               }`}
             >
-              <div className="w-full rounded-t-sm bg-blue-200" style={{ height: `${(org / max) * 100}%` }} />
-              <div className="w-full bg-purple-500" style={{ height: `${(ads / max) * 100}%` }} />
+              <div className="w-full rounded-t-sm bg-[#6b7cff]" style={{ height: `${(org / max) * 100}%` }} />
+              <div className="w-full bg-brand-500" style={{ height: `${(ads / max) * 100}%` }} />
               {d.purchases > 0 && (
                 <span className="absolute -top-2 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-green-600" />
               )}
@@ -85,8 +85,8 @@ function DailyChart({ days, showMoney }: { days: Day[]; showMoney: boolean }) {
         <span>{days[days.length - 1]?.day}</span>
       </div>
       <div className="mt-2 flex flex-wrap gap-4 text-xs text-gray-500">
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-purple-500" /> From ads</span>
-        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-200" /> Organic</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-brand-500" /> From ads</span>
+        <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#6b7cff]" /> Organic</span>
         <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-600" /> Day with a sale</span>
         <span>Hover a bar for numbers</span>
       </div>
@@ -172,12 +172,12 @@ export default async function Dashboard({
             role="img"
             aria-label={`${Math.round(adsShare)}% of installs came from ads`}
           >
-            <div className="h-full bg-purple-500" style={{ width: `${adsShare}%` }} />
+            <div className="h-full bg-brand-500" style={{ width: `${adsShare}%` }} />
           </div>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
             <div>
               <dt className="flex items-center gap-1.5 text-xs text-gray-500">
-                <span className="h-2 w-2 rounded-full bg-purple-500" /> From ads
+                <span className="h-2 w-2 rounded-full bg-brand-500" /> From ads
               </dt>
               <dd className="font-semibold tabular-nums">
                 {fmt(a.installs_ads)} <span className="text-xs font-normal text-gray-400">{pct(a.installs_ads, installs)}</span>
@@ -185,7 +185,7 @@ export default async function Dashboard({
             </div>
             <div>
               <dt className="flex items-center gap-1.5 text-xs text-gray-500">
-                <span className="h-2 w-2 rounded-full bg-blue-200" /> Organic
+                <span className="h-2 w-2 rounded-full bg-[#6b7cff]" /> Organic
               </dt>
               <dd className="font-semibold tabular-nums">
                 {fmt(a.installs_organic)}{" "}

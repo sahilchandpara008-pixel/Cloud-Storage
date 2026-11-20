@@ -46,7 +46,7 @@ export function Toast({ ok, error }: { ok?: string; error?: string }) {
         <span
           aria-hidden="true"
           className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold text-white ${
-            isError ? "bg-red-600" : "bg-green-600"
+            isError ? "bg-red-600" : "bg-green-600 !text-[#04210f]"
           }`}
         >
           {isError ? "!" : "✓"}

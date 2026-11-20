@@ -14,7 +14,7 @@ export function PageHeader({
   return (
     <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">{title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">{title}</h1>
         {subtitle && <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-500">{subtitle}</p>}
       </div>
       {action && <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>}
@@ -25,7 +25,7 @@ export function PageHeader({
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
     <section
-      className={`min-w-0 rounded-xl border border-gray-200 p-5 shadow-sm ${className.includes("bg-") ? "" : "bg-white"} ${className}`}
+      className={`min-w-0 rounded-2xl border border-gray-200 p-5 shadow-sm ${className.includes("bg-") ? "" : "bg-white"} ${className}`}
     >
       {children}
     </section>
@@ -44,10 +44,10 @@ export function Flash({ ok, error }: { ok?: string; error?: string }) {
 }
 
 const buttonStyles = {
-  primary: "bg-brand-700 text-white hover:bg-brand-800",
+  primary: "bg-brand-500 font-semibold text-ink-900 hover:bg-brand-400",
   secondary: "bg-white text-gray-700 ring-1 ring-gray-300 hover:bg-gray-50",
   danger: "bg-white text-red-700 ring-1 ring-red-300 hover:bg-red-50",
-  success: "bg-green-700 text-white hover:bg-green-800",
+  success: "bg-green-700 font-semibold text-ink-900 hover:bg-green-800",
 };
 
 type Variant = keyof typeof buttonStyles;
@@ -213,7 +213,7 @@ export function SegmentTabs({
   return (
     <nav
       aria-label="Filter"
-      className={`inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-gray-200 bg-gray-100/70 p-1 ${className}`}
+      className={`inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1 ${className}`}
     >
       {items.map((t) => (
         <Link
@@ -221,7 +221,7 @@ export function SegmentTabs({
           href={t.href}
           aria-current={t.active ? "page" : undefined}
           className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-            t.active ? "bg-white text-brand-800 shadow-sm ring-1 ring-gray-200" : "text-gray-600 hover:bg-white/70 hover:text-gray-900"
+            t.active ? "bg-gray-900 font-semibold text-gray-50" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
           }`}
         >
           {t.label}
@@ -276,11 +276,11 @@ export function Stat({
           </span>
         )}
       </div>
-      <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-gray-900">{value}</p>
+      <p className="font-display mt-2 text-3xl font-bold tabular-nums tracking-tight text-gray-900">{value}</p>
       {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
     </>
   );
-  const cls = "block min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-sm";
+  const cls = "block min-w-0 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm";
   return href ? (
     <Link href={href} className={`${cls} transition-colors hover:border-brand-200 hover:bg-brand-50/40`}>
       {body}
@@ -307,12 +307,12 @@ export function Notice({
       href={href}
       className={`flex flex-wrap items-center justify-between gap-3 rounded-xl px-5 py-4 text-sm shadow-sm transition-colors ${
         tone === "red"
-          ? "bg-brand-700 text-white hover:bg-brand-800"
+          ? "bg-brand-500 text-ink-900 hover:bg-brand-400"
           : "border border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100"
       }`}
     >
       <span className="font-medium">{children}</span>
-      <span className={tone === "red" ? "text-white/90" : "font-medium text-amber-800"}>{action}</span>
+      <span className={tone === "red" ? "font-semibold text-ink-900" : "font-medium text-amber-800"}>{action}</span>
     </Link>
   );
 }

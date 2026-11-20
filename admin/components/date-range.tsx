@@ -26,7 +26,7 @@ export function DatePresets({
             aria-current={active ? "true" : undefined}
             className={`rounded-full px-3 py-1 text-xs font-medium ring-1 transition-colors ${
               active
-                ? "bg-brand-700 text-white ring-brand-700"
+                ? "bg-brand-500 font-semibold text-ink-900 ring-brand-500"
                 : "bg-white text-gray-700 ring-gray-200 hover:bg-gray-50 hover:ring-gray-300"
             }`}
           >

@@ -1,18 +1,19 @@
 import type { ReactNode } from "react";
+import { inter, spaceGrotesk } from "@/app/fonts";
 import { Breadcrumb, Nav, type NavGroup } from "@/components/nav";
 
 // Small outlined button for the dark sidebar.
 const darkButton =
-  "rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-gray-200 transition-colors hover:border-white/30 hover:bg-white/5 hover:text-white";
+  "rounded-lg border border-white/15 px-3 py-1.5 text-xs font-medium text-[#e4e4e7] transition-colors hover:border-white/30 hover:bg-white/5 hover:text-white";
 
 function Logo() {
   return (
     <span className="flex items-center gap-3 font-semibold tracking-tight text-white">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/site/logo.png" alt="" width={36} height={36} className="h-9 w-9 rounded-xl" />
-      <span>
+      <span className="font-display text-lg">
         Flixvault
-        <span className="block text-[10px] font-medium uppercase tracking-[.2em] text-brand-400">Admin</span>
+        <span className="block font-sans text-[10px] font-medium uppercase tracking-[.2em] text-[#8a8a94]">Admin</span>
       </span>
     </span>
   );
@@ -34,9 +35,9 @@ export function AdminShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <aside className="bg-ink-900 md:fixed md:inset-y-0 md:left-0 md:z-20 md:flex md:w-60 md:flex-col">
-        <div className="flex items-center justify-between gap-3 px-4 py-3 md:border-b md:border-white/10 md:px-5 md:py-4">
+    <div className={`admin-theme ${inter.variable} ${spaceGrotesk.variable} min-h-screen`}>
+      <aside className="bg-[#0f0f12] md:border-r md:border-[#1f1f25] md:fixed md:inset-y-0 md:left-0 md:z-20 md:flex md:w-60 md:flex-col">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 md:border-b md:border-[#1f1f25] md:px-5 md:py-5">
           <Logo />
           <form action={signOut} className="md:hidden">
             <button className={darkButton}>Sign out</button>
@@ -45,9 +46,9 @@ export function AdminShell({
         <div className="md:flex-1 md:overflow-y-auto md:pt-4">
           <Nav groups={groups} />
         </div>
-        <div className="hidden items-center gap-3 border-t border-white/10 px-4 py-3 md:flex">
+        <div className="hidden items-center gap-3 border-t border-[#1f1f25] px-4 py-3 md:flex">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-gray-200" title={email}>
+            <p className="truncate text-xs font-medium text-[#e4e4e7]" title={email}>
               {email}
             </p>
             <p className="text-[11px] text-gray-500">{isOwner ? "Owner" : "Content admin"}</p>
