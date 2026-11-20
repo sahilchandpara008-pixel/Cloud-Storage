@@ -17,23 +17,52 @@ export function audienceLabel(value: string) {
   return AUDIENCES.find((a) => a.value === value)?.label ?? value;
 }
 
+// Every time in the admin is India time (IST), whatever time zone the server
+// (Vercel runs in UTC) or the admin's computer is set to.
+export const ADMIN_TZ = "Asia/Kolkata";
+
 export function formatDate(value: string | null | undefined) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("en-IN", {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("en-IN", {
+    timeZone: ADMIN_TZ,
     day: "2-digit",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   });
 }
 
-// <input type="datetime-local"> value, in the admin's local time.
+// <input type="datetime-local"> value ("2026-11-20T18:30") in India time.
 export function toLocalInput(value: string | null | undefined) {
   if (!value) return "";
   const d = new Date(value);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  if (Number.isNaN(d.getTime())) return "";
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-CA", {
+      timeZone: ADMIN_TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(d)
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+// The time typed in a datetime-local box, read as India time -> ISO (UTC).
+// Returns null for an empty or invalid value.
+export function fromLocalInput(value: string | null | undefined) {
+  if (!value) return null;
+  const d = new Date(`${value.length === 16 ? `${value}:00` : value}+05:30`);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 // Redirect target carrying a flash message (?ok= / ?error=).

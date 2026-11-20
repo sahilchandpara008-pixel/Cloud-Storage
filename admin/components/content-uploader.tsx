@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { MAX_THUMBNAIL_BYTES, MAX_VIDEO_BYTES, uploadVideoToBunny } from "@/lib/bunny-upload";
-import { AUDIENCES } from "@/lib/format";
+import { AUDIENCES, fromLocalInput } from "@/lib/format";
 import {
   MAX_UPLOAD_BYTES,
   extension,
@@ -285,8 +285,8 @@ export function ContentUploader({
     // "Publish at" is a time the admin typed, not this computer's clock.
     let scheduledAt: string | null = null;
     if (publishMode === "schedule") {
-      const when = publishLocal ? new Date(publishLocal) : null;
-      if (!when || Number.isNaN(when.getTime())) {
+      const when = fromLocalInput(publishLocal);
+      if (!when) {
         setFormError("Pick the date and time to publish at.");
         return;
       }
@@ -659,7 +659,7 @@ export function ContentUploader({
           </Select>
         </Field>
         {publishMode === "schedule" && (
-          <Field label="Publish at" hint="Your local time. It goes live then, once its video is encoded.">
+          <Field label="Publish at (India time)" hint="It goes live then, once its video is encoded.">
             <Input
               type="datetime-local"
               value={publishLocal}

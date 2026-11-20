@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui";
-import { AUDIENCES, STATUSES, toLocalInput } from "@/lib/format";
+import { AUDIENCES, STATUSES, fromLocalInput, toLocalInput } from "@/lib/format";
 
 export type ChannelOption = {
   id: string;
@@ -40,7 +40,7 @@ export function PostForm({
   // A post can't be wider than its channel: lock the audience to the channel's.
   const lockedAudience = channel && channel.audience !== "all" ? channel.audience : null;
   const effectiveAudience = lockedAudience ?? audience;
-  const publishIso = publishLocal ? new Date(publishLocal).toISOString() : "";
+  const publishIso = fromLocalInput(publishLocal)?.toISOString() ?? "";
 
   if (channels.length === 0) {
     return <p className="text-sm text-gray-600">Create a channel first.</p>;
@@ -105,7 +105,7 @@ export function PostForm({
           ))}
         </Select>
       </Field>
-      <Field label="Publish at" hint="Leave empty to publish immediately. A future time schedules the post.">
+      <Field label="Publish at (India time)" hint="Leave empty to publish immediately. A future time schedules the post.">
         <Input type="datetime-local" value={publishLocal} onChange={(e) => setPublishLocal(e.target.value)} />
         <input type="hidden" name="published_at" value={publishIso} />
       </Field>
