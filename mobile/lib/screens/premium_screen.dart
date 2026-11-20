@@ -11,6 +11,7 @@ import '../widgets/common.dart';
 import '../widgets/gates.dart';
 import '../widgets/reload.dart';
 import 'payment_status_screen.dart';
+import 'policy_screen.dart';
 import 'profile_screen.dart';
 
 /// Premium plans. Also the Profile tab; the person icon opens the profile.
@@ -53,6 +54,8 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
   Future<void> _next() async {
     final plan = plans?.firstWhere((p) => p.id == selected);
     if (plan == null) return;
+    // Terms first; "OK, continue" goes on to the payment as before.
+    if (!await showPlanTerms(context, plan) || !mounted) return;
     setState(() => sending = true);
     try {
       // Play Store build only: Google's information screen + report token.
@@ -554,4 +557,193 @@ class _FreeAccount extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Shown when "Continue to payment" is tapped, before the UPI app opens.
+/// Returns true when the user taps "OK, continue"; the payment then goes on
+/// exactly as before.
+Future<bool> showPlanTerms(BuildContext context, Plan plan) async {
+  void open(String key) => Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => PolicyScreen(policyKey: key)));
+  final points = [
+    if (app.isGuest)
+      'You are not logged in, so this plan is saved only on this phone. If '
+          'you uninstall the app, clear its data, reset or change your phone, '
+          'the plan will be lost. Log in from Profile to keep it on any phone.'
+    else
+      'Your plan is saved to your account. Log in with the same account on a '
+          'new phone to keep using it.',
+    'If money is debited from your bank but the plan is not activated, do '
+        'not pay again. Contact support within 24 hours of the payment with '
+        'your order number and UTR, and we will activate the plan or refund '
+        'the payment.',
+    'Read the Terms and the Refund Policy before paying. Plans are '
+        'non-refundable once activated, except as described in the Refund '
+        'Policy (for example, a double charge).',
+  ];
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (context) => Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      clipBehavior: Clip.antiAlias,
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 14, 8, 0),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Terms and Conditions',
+                    style: TextStyle(
+                      fontFamily: AppFonts.display,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(context, false),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            margin: const EdgeInsets.fromLTRB(22, 6, 22, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0x1AFF7A1A),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0x59FF7A1A)),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${plan.name} · ${plan.durationLabel}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  '₹${plan.priceInr}',
+                  style: const TextStyle(
+                    fontFamily: AppFonts.display,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < points.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 24,
+                            height: 24,
+                            margin: const EdgeInsets.only(right: 12, top: 1),
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: AppColors.surfaceHigh,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '${i + 1}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              points[i],
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                height: 1.5,
+                                color: Color(0xFFD4D4D8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Wrap(
+                    spacing: 4,
+                    children: [
+                      TextButton(
+                        onPressed: () => open('terms'),
+                        child: const Text('Terms & Conditions'),
+                      ),
+                      TextButton(
+                        onPressed: () => open('refund'),
+                        child: const Text('Refund Policy'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 52),
+                    ),
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 3,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 52),
+                    ),
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('OK, continue'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+  return ok == true;
 }
