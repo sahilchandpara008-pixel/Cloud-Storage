@@ -43,7 +43,11 @@ type Health = {
 const EVENTS = [
   ["PageView", "Download page opened (browser Pixel)"],
   ["Lead", "Download tapped on the download page (browser Pixel + server, counted once)"],
-  ["AppInstall", "First time the app is opened on a phone"],
+  [
+    "MobileAppInstall",
+    "First time the app is opened on a phone. This is Meta's own install event: Ads Manager counts it as App installs",
+  ],
+  ["AppInstall", "Sent together with MobileAppInstall, for ad sets that already use this custom event"],
   ["CompleteRegistration", "A guest creates an account or logs in for the first time"],
   ["ViewContent", "A video, image or trailer is opened"],
   ["InitiateCheckout", "Continue to payment is tapped (UPI order created), with the plan price"],

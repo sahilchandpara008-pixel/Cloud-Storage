@@ -852,11 +852,96 @@ select t.ok((select count(*) from public.meta_events) = 0, 'no Meta events while
 update public.meta_settings set pixel_id = '1234567890', access_token = 'TEST_TOKEN', enabled = true where id = 1;
 insert into public.installs (install_id, referrer_status, source) values ('99999999-0000-0000-0000-000000000001', 'apk', 'meta');
 select t.ok((select count(*) from public.meta_events where event_name = 'AppInstall') = 1, 'install → AppInstall');
+-- Meta counts an install only under its own name; the installation ID ties
+-- later events of the same phone to it.
+select t.ok((select count(*) from public.meta_events where event_name = 'MobileAppInstall'
+               and event_id = 'mobile-install-99999999-0000-0000-0000-000000000001') = 1,
+            'install → Meta''s standard MobileAppInstall as well');
+select t.ok((select p->>'event_name' = 'MobileAppInstall' and p->>'action_source' = 'app'
+                    and not (p ? 'custom_data')
+                    and p->'user_data'->>'anon_id' = '99999999-0000-0000-0000-000000000001'
+                    and not (p->'app_data' ? 'install_referrer')
+               from (select public.meta_event_payload(e, s) p
+                       from public.meta_events e, public.meta_settings s
+                      where e.event_id = 'mobile-install-99999999-0000-0000-0000-000000000001') x),
+            'MobileAppInstall: installation ID, no empty custom data, no referrer without a Play ad install');
+select t.ok((select p->'user_data'->>'anon_id' = '99999999-0000-0000-0000-000000000001'
+                    and p->'custom_data'->>'source' = 'meta'
+               from (select public.meta_event_payload(e, s) p
+                       from public.meta_events e, public.meta_settings s
+                      where e.event_id = 'install-99999999-0000-0000-0000-000000000001') x),
+            'AppInstall is still sent, now with the installation ID');
+insert into public.installs (install_id, referrer_status, source, raw_referrer) values
+  ('99999999-0000-0000-0000-0000000000d1', 'ok', 'meta', 'utm_source=apps.facebook.com&utm_campaign=fb4a&utm_content=%7B%22app%22%3A1790101855436439%2C%22t%22%3A1795090000%2C%22source%22%3A%7B%22data%22%3A%22ab%22%2C%22nonce%22%3A%22cd%22%7D%7D'),
+  ('99999999-0000-0000-0000-0000000000d2', 'ok', 'organic', 'utm_source=google-play&utm_medium=organic');
+select t.ok((select p->'app_data'->>'install_referrer' = 'utm_source=apps.facebook.com&utm_campaign=fb4a&utm_content=%7B%22app%22%3A1790101855436439%2C%22t%22%3A1795090000%2C%22source%22%3A%7B%22data%22%3A%22ab%22%2C%22nonce%22%3A%22cd%22%7D%7D'
+                    and p->'app_data'->>'installer_package' = 'com.android.vending'
+                    and p->'user_data'->>'anon_id' = '99999999-0000-0000-0000-0000000000d1'
+               from (select public.meta_event_payload(e, s) p
+                       from public.meta_events e, public.meta_settings s
+                      where e.event_id = 'mobile-install-99999999-0000-0000-0000-0000000000d1') x),
+            'Meta ad install from Google Play passes Meta''s click reference back');
+select t.ok((select not (p->'app_data' ? 'install_referrer') and not (p->'app_data' ? 'installer_package')
+                    and p->'user_data'->>'anon_id' = '99999999-0000-0000-0000-0000000000d2'
+               from (select public.meta_event_payload(e, s) p
+                       from public.meta_events e, public.meta_settings s
+                      where e.event_id = 'mobile-install-99999999-0000-0000-0000-0000000000d2') x),
+            'an organic Play install sends no referrer to Meta');
+update public.meta_settings set action_source = 'website' where id = 1;
+insert into public.installs (install_id, referrer_status, source) values ('99999999-0000-0000-0000-0000000000d3', 'apk', 'meta');
+select t.ok(exists (select 1 from public.meta_events where event_id = 'install-99999999-0000-0000-0000-0000000000d3')
+            and not exists (select 1 from public.meta_events where event_id = 'mobile-install-99999999-0000-0000-0000-0000000000d3'),
+            'website mode: no MobileAppInstall');
+select t.ok((select not (p->'user_data' ? 'anon_id') and not (p ? 'app_data') and p ? 'event_source_url'
+               from (select public.meta_event_payload(e, s) p
+                       from public.meta_events e, public.meta_settings s
+                      where e.event_id = 'install-99999999-0000-0000-0000-0000000000d3') x),
+            'website mode: no app-only fields');
+update public.meta_settings set action_source = 'app' where id = 1;
+delete from public.meta_events where install_id in ('99999999-0000-0000-0000-0000000000d1',
+  '99999999-0000-0000-0000-0000000000d2', '99999999-0000-0000-0000-0000000000d3');
+delete from public.installs where install_id in ('99999999-0000-0000-0000-0000000000d1',
+  '99999999-0000-0000-0000-0000000000d2', '99999999-0000-0000-0000-0000000000d3');
 
 insert into auth.users (id, email, is_anonymous) values ('99999999-0000-0000-0000-0000000000aa', null, true);
 update auth.users set email = 'Buyer@Example.com', is_anonymous = false where id = '99999999-0000-0000-0000-0000000000aa';
 select t.ok((select count(*) from public.meta_events where event_name = 'CompleteRegistration'
                and user_id = '99999999-0000-0000-0000-0000000000aa') = 1, 'guest → account = CompleteRegistration');
+
+-- An account that never was a guest (first Google sign-in without linking)
+-- reports its sign-up at its first login; old accounts and admins do not.
+insert into auth.users (id, email, is_anonymous, created_at) values
+  ('99999999-0000-0000-0000-0000000000bb', 'direct@example.com', false, now()),
+  ('99999999-0000-0000-0000-0000000000cc', 'old@example.com', false, now() - interval '3 days');
+select t.ok(not exists (select 1 from public.meta_events where event_name = 'CompleteRegistration'
+                           and event_id in ('register-99999999-0000-0000-0000-0000000000bb',
+                                            'register-99999999-0000-0000-0000-0000000000cc')),
+            'a direct account sends no sign-up before its first login');
+set role authenticated;
+select set_config('request.jwt.claim.sub', '99999999-0000-0000-0000-0000000000bb', false);
+select public.attribute_user('99999999-0000-0000-0000-000000000001');
+select public.attribute_user('99999999-0000-0000-0000-000000000001');
+select set_config('request.jwt.claim.sub', '99999999-0000-0000-0000-0000000000cc', false);
+select public.attribute_user('99999999-0000-0000-0000-000000000001');
+select t.act_as('owner');
+select public.attribute_user('99999999-0000-0000-0000-000000000001');
+select set_config('request.jwt.claim.sub', '99999999-0000-0000-0000-0000000000aa', false);
+select public.attribute_user('99999999-0000-0000-0000-000000000001');
+reset role;
+select t.ok((select count(*) from public.meta_events where event_name = 'CompleteRegistration'
+               and event_id = 'register-99999999-0000-0000-0000-0000000000bb') = 1,
+            'new direct account: first login → one CompleteRegistration');
+select t.ok(not exists (select 1 from public.meta_events
+                         where event_id = 'register-99999999-0000-0000-0000-0000000000cc'),
+            'an older account logging in sends no sign-up');
+select t.ok(not exists (select 1 from public.meta_events where event_id = 'register-' || t.id('owner')),
+            'an admin logging in sends no sign-up');
+select t.ok((select count(*) from public.meta_events where event_name = 'CompleteRegistration'
+               and user_id = '99999999-0000-0000-0000-0000000000aa') = 1,
+            'a guest who became an account still sends exactly one sign-up');
+delete from public.user_attribution where user_id in ('99999999-0000-0000-0000-0000000000aa', t.id('owner'));
+delete from auth.users where id in ('99999999-0000-0000-0000-0000000000bb', '99999999-0000-0000-0000-0000000000cc');
+delete from public.meta_events where event_id = 'register-99999999-0000-0000-0000-0000000000bb';
 
 set role authenticated;
 select t.act_as('ads_user');
@@ -895,7 +980,11 @@ select t.ok(public.meta_dispatch() = 0, 'sender is a no-op without pg_net (local
 set role authenticated;
 select t.act_as('owner');
 select t.ok((select count(*) from public.admin_meta_events()) >= 5, 'owner sees the event log');
+select public.admin_meta_test_event();
 reset role;
+select t.ok((select count(*) from public.meta_events where event_name = 'TestEvent') = 1
+            and (select count(*) from public.meta_events where event_name = 'ViewContent') = 1,
+            'the test button sends a TestEvent, not a ViewContent');
 
 -- Meta ROAS: download page click → install → purchase carries fbc/fbp/IP
 set role anon;
@@ -925,11 +1014,12 @@ select t.ok((select p->'user_data'->>'fbc' = 'fb.1.1700000000000.ABCclick'
                     and p->'user_data'->>'fbp' = 'fb.1.1700000000000.123'
                     and p->'user_data'->>'client_ip_address' = '203.0.113.7'
                     and p->'user_data'->>'client_user_agent' like 'Mozilla%'
+                    and p->'user_data'->>'anon_id' = '99999999-0000-0000-0000-0000000000c1'
                     and p->'custom_data'->>'value' = '129.00'
                from (select public.meta_event_payload(e, s) p
                        from public.meta_events e, public.meta_settings s
                       where e.event_id = 'purchase-' || t.get('ro')) x),
-            'Purchase carries the ad click (fbc, fbp, IP, browser) and value');
+            'Purchase carries the ad click (fbc, fbp, IP, browser), the installation ID and value');
 select set_config('request.headers', '{"x-forwarded-for": "198.51.100.9"}', false);
 insert into public.installs (install_id, referrer_status, source) values ('99999999-0000-0000-0000-0000000000c2', 'apk', 'meta');
 select set_config('request.headers', '', false);

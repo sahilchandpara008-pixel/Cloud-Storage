@@ -6,9 +6,11 @@ import { redirect } from "next/navigation";
 import { requireOwner } from "@/lib/auth";
 import { withMessage } from "@/lib/format";
 
-// Send one real test event with this Pixel ID and token, exactly the way the
-// app's events are sent. "ok" = Meta received it; a string = Meta's error to
-// show the owner; null = Meta could not be reached from here.
+// Check this Pixel ID and token by sending one clearly named check event
+// ("ConnectionCheck"), so the check is never counted as a real ViewContent
+// or any other event an ad set could optimise for. "ok" = Meta received it;
+// a string = Meta's error to show the owner; null = Meta could not be
+// reached from here.
 async function checkWithMeta(
   pixel: string,
   token: string,
@@ -26,7 +28,7 @@ async function checkWithMeta(
         body: JSON.stringify({
           data: [
             {
-              event_name: "ViewContent",
+              event_name: "ConnectionCheck",
               event_time: Math.floor(Date.now() / 1000),
               event_id: `connect-${crypto.randomUUID()}`,
               action_source: "website",
@@ -35,11 +37,11 @@ async function checkWithMeta(
                 external_id: [createHash("sha256").update("flixvault-admin-connect").digest("hex")],
                 client_user_agent: "FlixvaultAdmin/1.0",
               },
-              custom_data: { content_type: "test", content_ids: ["connect"] },
+              custom_data: { content_type: "test" },
             },
           ],
-          // With a test code the check shows under Test events only and is
-          // not counted with real events.
+          // With a test code the check also shows under Test events in
+          // Events Manager.
           ...(testCode ? { test_event_code: testCode } : {}),
         }),
       },
