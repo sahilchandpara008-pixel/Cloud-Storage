@@ -322,7 +322,7 @@ class _Tag extends StatelessWidget {
 
 // ------------------------------------------------------------------ info
 
-/// "Premium  2026 · 2h 19m · 1.2K views  HD".
+/// "Premium  2h 19m  HD". View counts are not shown in the app.
 class _MetaRow extends StatelessWidget {
   final Post post;
   final PostItem? item;
@@ -336,18 +336,11 @@ class _MetaRow extends StatelessWidget {
     return '${s}s';
   }
 
-  static String _views(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M views';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K views';
-    return n == 1 ? '1 view' : '$n views';
-  }
-
   @override
   Widget build(BuildContext context) {
     const style = TextStyle(color: AppColors.muted, fontSize: 13.5);
     final parts = <String>[
       if (item?.durationS != null) _long(item!.durationS!),
-      if (post.viewCount > 0) _views(post.viewCount),
     ];
     return Wrap(
       spacing: 8,
@@ -355,7 +348,7 @@ class _MetaRow extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (item?.isPremium ?? false) const PremiumBadge(),
-        Text(parts.join('  ·  '), style: style),
+        if (parts.isNotEmpty) Text(parts.join('  ·  '), style: style),
         if (item?.isVideo ?? false)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
