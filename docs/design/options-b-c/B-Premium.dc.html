@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Option B · Premium</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B1016}
+a{color:#FF9A4D}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0B1016; color: #F2F4F7; font-family: Inter, system-ui, sans-serif">
+  <div aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; height: 200px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; opacity: 0.5">
+    <span style="background: url(img/p1.jpg) center/cover"></span><span style="background: url(img/p4.jpg) center/cover"></span><span style="background: url(img/p2.jpg) center/cover"></span><span style="background: url(img/p5.jpg) center/cover"></span><span style="background: url(img/p7.jpg) center/cover"></span>
+  </div>
+  <div aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; height: 210px; background: linear-gradient(to bottom, rgba(11,16,22,0.3), #0B1016)"></div>
+  <a href="B-Post.dc.html" aria-label="Close" style="position: absolute; top: 12px; right: 12px; width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+
+  <div style="position: relative; padding: 120px 18px 0">
+    <span style="font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 0.06em; color: {{accent}}">FLIXVAULT PREMIUM</span>
+    <h1 style="margin: 4px 0 0; font-size: 26px; font-weight: 800; line-height: 1.15">Choose your plan</h1>
+    <p style="margin: 6px 0 0; font-size: 14px; color: #A7B0BC">Full videos · All channels · Cancel anytime</p>
+  </div>
+
+  <div style="position: relative; display: flex; flex-direction: column; gap: 10px; padding: 18px 18px 0">
+    <sc-for list="{{plans}}" as="p" hint-placeholder-count="5">
+      <div style="position: relative; display: flex; align-items: center; height: 64px; padding: 0 16px; border-radius: 8px; background: {{p.bg}}; border: {{p.border}}">
+        <span style="flex: 1">
+          <span style="display: block; font-size: 16px; font-weight: 700">{{p.name}}</span>
+          <span style="display: block; margin-top: 2px; font-size: 12px; color: #A7B0BC">{{p.d}} days of full access</span>
+        </span>
+        <sc-if value="{{p.tag}}" hint-placeholder-val="{{false}}"><span style="margin-right: 12px; padding: 3px 7px; border-radius: 4px; background: {{accent}}; color: #1A1005; font-size: 10px; font-weight: 800">{{p.tag}}</span></sc-if>
+        <span style="font-size: 20px; font-weight: 800">₹{{p.price}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="position: absolute; left: 18px; right: 18px; bottom: 24px">
+    <a href="Payment.dc.html" style="height: 52px; border-radius: 8px; background: {{accent}}; color: #1A1005; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; text-decoration: none">Continue · ₹259</a>
+    <p style="margin: 10px 0 0; text-align: center; font-size: 12px; color: #7B8594">Pay with any UPI app</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#E50914","#00A8E1","#F5B400"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#FF7A1A';
+    const list = [
+      { name: 'Trial', price: 49, d: 3 },
+      { name: 'Silver', price: 129, d: 7 },
+      { name: 'Gold', price: 259, d: 30, tag: 'POPULAR', sel: true },
+      { name: 'Platinum', price: 599, d: 180 },
+      { name: 'Diamond', price: 999, d: 365, tag: 'BEST VALUE' }
+    ];
+    return {
+      accent,
+      plans: list.map((p) => ({ ...p, tag: p.tag || '', bg: p.sel ? '#1A2430' : '#141C25', border: p.sel ? '2px solid ' + accent : '1px solid #222C38' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

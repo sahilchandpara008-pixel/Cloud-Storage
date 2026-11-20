@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Option B · Channel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B1016}
+a{color:#FF9A4D}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0B1016; color: #F2F4F7; font-family: Inter, system-ui, sans-serif">
+  <div style="position: relative; height: 300px; background: url(img/h1.jpg) center/cover">
+    <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(11,16,22,0.5), rgba(11,16,22,0) 30%, #0B1016)"></div>
+    <a href="B-Channels.dc.html" aria-label="Back" style="position: absolute; top: 12px; left: 12px; width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></a>
+    <div style="position: absolute; left: 16px; right: 16px; bottom: 0; display: flex; align-items: flex-end; gap: 12px">
+      <span style="width: 64px; height: 64px; border-radius: 8px; background: url(img/a1.jpg) center/cover; box-shadow: 0 4px 20px rgba(0,0,0,0.6)"></span>
+      <span style="flex: 1">
+        <span style="display: block; font-family: 'Bebas Neue', sans-serif; font-size: 34px; line-height: 1; letter-spacing: 0.02em">WEB SERIES</span>
+        <span style="display: block; margin-top: 4px; font-size: 13px; color: #A7B0BC">15K followers · Original drama</span>
+      </span>
+    </div>
+  </div>
+  <div style="display: flex; gap: 8px; padding: 14px 16px 0">
+    <button style="flex: 1; height: 44px; border: 0; border-radius: 6px; background: #F2F4F7; color: #0B1016; font: inherit; font-size: 15px; font-weight: 700">+ Join channel</button>
+    <button aria-label="Share" style="width: 44px; height: 44px; border: 0; border-radius: 6px; background: #222C38; color: #F2F4F7; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13"></path></svg></button>
+  </div>
+
+  <section style="padding: 20px 0 0 16px">
+    <h2 style="margin: 0 0 10px; font-size: 16px; font-weight: 700">Latest</h2>
+    <div style="display: flex; gap: 8px">
+      <sc-for list="{{latest}}" as="i" hint-placeholder-count="4">
+        <a href="B-Post.dc.html" style="position: relative; flex: none; display: block; width: 102px; height: 146px; border-radius: 6px; background: url({{i.img}}) center/cover">
+          <sc-if value="{{i.premium}}" hint-placeholder-val="{{true}}"><span style="position: absolute; top: 0; right: 0; padding: 2px 6px; border-radius: 0 6px 0 6px; background: {{accent}}; color: #1A1005; font-size: 9px; font-weight: 800">PREMIUM</span></sc-if>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+  <section style="padding: 20px 0 0 16px">
+    <h2 style="margin: 0 0 10px; font-size: 16px; font-weight: 700">Most watched</h2>
+    <div style="display: flex; gap: 8px">
+      <sc-for list="{{most}}" as="i" hint-placeholder-count="4">
+        <a href="B-Post.dc.html" style="position: relative; flex: none; display: block; width: 102px; height: 146px; border-radius: 6px; background: url({{i.img}}) center/cover">
+          <sc-if value="{{i.premium}}" hint-placeholder-val="{{true}}"><span style="position: absolute; top: 0; right: 0; padding: 2px 6px; border-radius: 0 6px 0 6px; background: {{accent}}; color: #1A1005; font-size: 9px; font-weight: 800">PREMIUM</span></sc-if>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#E50914","#00A8E1","#F5B400"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#FF7A1A',
+      latest: [{ img: 'img/p1.jpg', premium: true }, { img: 'img/p2.jpg', premium: true }, { img: 'img/p4.jpg', premium: false }, { img: 'img/p7.jpg', premium: true }],
+      most: [{ img: 'img/p5.jpg', premium: false }, { img: 'img/p3.jpg', premium: true }, { img: 'img/p6.jpg', premium: false }, { img: 'img/p8.jpg', premium: true }]
+    };
+  }
+}
+</script>
+</body>
+</html>

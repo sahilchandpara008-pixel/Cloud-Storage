@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Option B · Explore</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B1016}
+a{color:#FF9A4D}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0B1016; color: #F2F4F7; font-family: Inter, system-ui, sans-serif">
+
+  <div style="position: relative; height: 470px; background: url(img/p1.jpg) center 20%/cover">
+    <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(11,16,22,0.75), rgba(11,16,22,0) 22%, rgba(11,16,22,0) 55%, #0B1016 97%)"></div>
+    <div style="position: absolute; top: 14px; left: 18px; right: 18px; display: flex; align-items: center; justify-content: space-between">
+      <span style="font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 0.04em; color: {{accent}}">FLIXVAULT</span>
+      <span style="display: flex; gap: 6px">
+        <button aria-label="Search" style="width: 44px; height: 44px; border: 0; background: transparent; color: #F2F4F7; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
+      </span>
+    </div>
+    <div style="position: absolute; top: 64px; left: 18px; display: flex; gap: 8px">
+      <span style="padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); font-size: 13px; font-weight: 600; background: rgba(0,0,0,0.25)">Series</span>
+      <span style="padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); font-size: 13px; font-weight: 600; background: rgba(0,0,0,0.25)">Films</span>
+      <span style="padding: 6px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.5); font-size: 13px; font-weight: 600; background: rgba(0,0,0,0.25)">Categories ▾</span>
+    </div>
+    <div style="position: absolute; left: 0; right: 0; bottom: 6px; text-align: center">
+      <p style="margin: 0; font-size: 12px; color: #C9CED6">Thriller · Drama · New episodes weekly</p>
+      <div style="display: flex; gap: 10px; justify-content: center; margin-top: 12px">
+        <a href="B-Post.dc.html" style="width: 150px; height: 46px; border-radius: 8px; background: #F2F4F7; color: #0B1016; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l12-7.5z"></path></svg>Preview</a>
+        <a href="B-Post.dc.html" style="width: 150px; height: 46px; border-radius: 8px; background: rgba(110,118,130,0.55); color: #F2F4F7; font-weight: 700; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg>Details</a>
+      </div>
+    </div>
+  </div>
+
+  <section style="padding: 18px 0 0 18px">
+    <h2 style="margin: 0 0 10px; font-size: 17px; font-weight: 700">Top 10 on Flixvault today</h2>
+    <div style="display: flex; gap: 4px">
+      <sc-for list="{{top}}" as="t" hint-placeholder-count="3">
+        <a href="B-Post.dc.html" style="flex: none; display: flex; align-items: flex-end; text-decoration: none">
+          <span style="font-family: 'Bebas Neue', sans-serif; font-size: 110px; line-height: 0.78; color: #0B1016; -webkit-text-stroke: 2px #5B6574; margin-right: -14px">{{t.n}}</span>
+          <span style="position: relative; display: block; width: 92px; height: 132px; border-radius: 6px; background: url({{t.img}}) center/cover">
+            <sc-if value="{{t.premium}}" hint-placeholder-val="{{true}}"><span style="position: absolute; top: 0; right: 0; padding: 2px 6px; border-radius: 0 6px 0 6px; background: {{accent}}; color: #1A1005; font-size: 9px; font-weight: 800">PREMIUM</span></sc-if>
+          </span>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <section style="padding: 18px 0 0 18px">
+    <h2 style="margin: 0 0 10px; font-size: 17px; font-weight: 700">Continue watching</h2>
+    <div style="display: flex; gap: 8px">
+      <sc-for list="{{cont}}" as="c" hint-placeholder-count="3">
+        <a href="B-Post.dc.html" style="flex: none; width: 150px; text-decoration: none; color: #F2F4F7">
+          <span style="position: relative; display: block; height: 84px; border-radius: 6px 6px 0 0; background: url({{c.img}}) center/cover">
+            <span style="position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 1.5px solid #fff; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z"></path></svg></span>
+          </span>
+          <span style="display: block; height: 3px; background: #2A3442"><span style="display: block; height: 3px; width: {{c.pct}}; background: {{accent}}"></span></span>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background: rgba(11,16,22,0.97); border-top: 1px solid #1C2530; display: flex; align-items: center; justify-content: space-around; padding-bottom: 6px">
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="5">
+      <a href="{{n.href}}" style="width: 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: {{n.color}}; font-size: 11px; font-weight: {{n.weight}}; text-decoration: none">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{n.icon}}"></path></svg>{{n.label}}</a>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#E50914","#00A8E1","#F5B400"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#FF7A1A';
+    const tabs = [
+      ['Cloud', 'B-Explore.dc.html', 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z'],
+      ['Feed', 'B-Explore.dc.html', 'M4 5h16v10H4zM8 19h8'],
+      ['Explore', 'B-Explore.dc.html', 'M3 11 12 4l9 7v9h-6v-6H9v6H3z'],
+      ['Channels', 'B-Channels.dc.html', 'M3 6h18v13H3zM8 2l4 4 4-4'],
+      ['Profile', 'B-Explore.dc.html', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6']
+    ];
+    const active = 'Explore';
+    return {
+      accent,
+      top: [
+        { n: 1, img: 'img/p4.jpg', premium: true },
+        { n: 2, img: 'img/p2.jpg', premium: true },
+        { n: 3, img: 'img/p5.jpg', premium: false }
+      ],
+      cont: [
+        { img: 'img/t1.jpg', pct: '62%' },
+        { img: 'img/t3.jpg', pct: '25%' },
+        { img: 'img/t2.jpg', pct: '80%' }
+      ],
+      nav: tabs.map(([label, href, icon]) => ({ label, href, icon, color: label === active ? '#F2F4F7' : '#7B8594', weight: label === active ? 700 : 500 }))
+    };
+  }
+}
+</script>
+</body>
+</html>

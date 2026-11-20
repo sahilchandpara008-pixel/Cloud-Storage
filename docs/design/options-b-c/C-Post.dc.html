@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Option C · Video details</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#000}
+a{color:#FF9A4D}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #000; color: #F5F5F7; font-family: 'Nunito Sans', system-ui, sans-serif">
+  <div style="position: relative; height: 300px; background: url(img/p1.jpg) center 30%/cover">
+    <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0) 30%, #000)"></div>
+    <a href="C-Channel.dc.html" aria-label="Back" style="position: absolute; top: 10px; left: 8px; width: 44px; height: 44px; color: #fff; display: flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></a>
+  </div>
+  <div style="position: relative; margin-top: -40px; padding: 0 16px">
+    <h1 style="margin: 0; font-size: 28px; font-weight: 900; line-height: 1.1">Midnight Run</h1>
+    <p style="margin: 6px 0 0; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #A0A0AB">
+      <span style="padding: 1px 6px; background: {{accent}}; color: #000; font-size: 11px; font-weight: 900">PREMIUM</span>
+      Thriller · 8 parts · <span style="color: #F5F5F7">★ 4.8</span></p>
+    <a href="Player.dc.html" style="margin-top: 14px; height: 46px; background: {{accent}}; color: #000; font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none"><svg width="16" height="16" viewBox="0 0 24 24" fill="#000"><path d="M7 4.5v15l12-7.5z"></path></svg>Watch preview · Part 1</a>
+    <a href="C-Premium.dc.html" style="margin-top: 8px; height: 46px; border: 2px solid {{accent}}; color: {{accent}}; font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l4 3 5-7 5 7 4-3-2 11H5z"></path></svg>Unlock full series</a>
+    <p style="margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: #C8C8D0">A late-night driver takes one last job across the city and finds the passenger is not who she says she is. <a href="#" style="font-weight: 800; text-decoration: none">see more</a></p>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding-bottom: 8px; border-bottom: 1px solid #23252B">
+      <span style="font-size: 16px; font-weight: 900">Parts</span>
+      <span style="font-size: 13px; font-weight: 800; color: #A0A0AB">Oldest first ▾</span>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px">
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="3">
+        <a href="Player.dc.html" style="display: flex; gap: 12px; text-decoration: none; color: #F5F5F7; background: #141519; padding: 8px">
+          <span style="position: relative; flex: none; width: 120px; height: 68px; background: url({{it.img}}) center/cover">
+            <sc-if value="{{it.locked}}" hint-placeholder-val="{{true}}"><span style="position: absolute; top: 0; left: 0; width: 20px; height: 20px; background: {{accent}}; display: flex; align-items: center; justify-content: center"><svg width="11" height="11" viewBox="0 0 24 24" fill="#000"><path d="M3 8l4 3 5-7 5 7 4-3-2 11H5z"></path></svg></span></sc-if>
+            <span style="position: absolute; right: 4px; bottom: 4px; padding: 0 4px; background: rgba(0,0,0,0.8); font-size: 10px; font-weight: 700">{{it.time}}</span>
+          </span>
+          <span><span style="display: block; font-size: 12px; color: #A0A0AB; font-weight: 700">{{it.n}}</span><span style="display: block; font-size: 14px; font-weight: 800">{{it.title}}</span></span>
+        </a>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#F47521","#2AABEE","#F5B400"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#FF7A1A',
+      items: [
+        { n: 'Part 1', title: 'The pickup', time: '14:20', img: 'img/t2.jpg', locked: false },
+        { n: 'Part 2', title: 'Wrong turn', time: '13:55', img: 'img/t7.jpg', locked: true },
+        { n: 'Part 3', title: 'Sunrise', time: '13:40', img: 'img/t3.jpg', locked: true }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

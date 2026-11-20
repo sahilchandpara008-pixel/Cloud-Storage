@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Option C · Premium</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800;6..12,900&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#000}
+a{color:#FF9A4D}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #000; color: #F5F5F7; font-family: 'Nunito Sans', system-ui, sans-serif">
+  <div style="position: relative; padding: 0 16px; height: 210px; background: linear-gradient(160deg, {{accent}}, #B84300); overflow: hidden">
+    <svg aria-hidden="true" width="240" height="240" viewBox="0 0 24 24" fill="rgba(0,0,0,0.13)" style="position: absolute; right: -50px; top: -10px"><path d="M3 8l4 3 5-7 5 7 4-3-2 11H5z"></path></svg>
+    <a href="C-Post.dc.html" aria-label="Close" style="position: absolute; top: 10px; left: 8px; width: 44px; height: 44px; color: #000; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></a>
+    <div style="position: absolute; left: 16px; right: 16px; bottom: 20px; color: #000">
+      <p style="margin: 0; font-size: 13px; font-weight: 900; letter-spacing: 0.08em">FLIXVAULT PREMIUM</p>
+      <h1 style="margin: 4px 0 0; font-size: 30px; font-weight: 900; line-height: 1.05">Unlock every<br>full video</h1>
+    </div>
+  </div>
+  <ul style="list-style: none; margin: 14px 16px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 700; color: #D0D0D8">
+    <li style="display: flex; gap: 8px; align-items: center"><span style="color: {{accent}}">✓</span>All premium videos in full</li>
+    <li style="display: flex; gap: 8px; align-items: center"><span style="color: {{accent}}">✓</span>New parts the day they drop</li>
+  </ul>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 16px 0">
+    <sc-for list="{{plans}}" as="p" hint-placeholder-count="5">
+      <div style="position: relative; padding: 14px 12px; background: {{p.bg}}; border: {{p.border}}; grid-column: {{p.span}}">
+        <sc-if value="{{p.tag}}" hint-placeholder-val="{{false}}"><span style="position: absolute; top: -9px; left: 10px; padding: 1px 7px; background: {{accent}}; color: #000; font-size: 10px; font-weight: 900">{{p.tag}}</span></sc-if>
+        <p style="margin: 0; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; color: {{p.nameColor}}">{{p.name}}</p>
+        <p style="margin: 4px 0 0; font-size: 24px; font-weight: 900">₹{{p.price}}</p>
+        <p style="margin: 0; font-size: 12px; color: #A0A0AB; font-weight: 700">{{p.d}} days</p>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 22px">
+    <a href="Payment.dc.html" style="height: 52px; background: {{accent}}; color: #000; font-size: 16px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; display: flex; align-items: center; justify-content: center; text-decoration: none">Pay ₹259 with UPI</a>
+    <p style="margin: 10px 0 0; text-align: center; font-size: 12px; color: #8A8A94">Plan starts as soon as payment is confirmed</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#F47521","#2AABEE","#F5B400"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#FF7A1A';
+    const list = [
+      { name: 'Gold', price: 259, d: 30, tag: 'MOST POPULAR', sel: true, span: 'span 2' },
+      { name: 'Trial', price: 49, d: 3 },
+      { name: 'Silver', price: 129, d: 7 },
+      { name: 'Platinum', price: 599, d: 180 },
+      { name: 'Diamond', price: 999, d: 365, tag: 'BEST VALUE' }
+    ];
+    return {
+      accent,
+      plans: list.map((p) => ({ ...p, tag: p.tag || '', span: p.span || 'auto', bg: p.sel ? 'rgba(255,122,26,0.12)' : '#141519', border: p.sel ? '2px solid ' + accent : '2px solid #23252B', nameColor: p.sel ? accent : '#C8C8D0' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

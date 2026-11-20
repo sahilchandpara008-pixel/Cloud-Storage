@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Option B · Channels</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&amp;family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B1016}
+a{color:#FF9A4D}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0B1016; color: #F2F4F7; font-family: Inter, system-ui, sans-serif">
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 10px">
+    <h1 style="margin: 0; font-size: 22px; font-weight: 800">Channels</h1>
+    <button aria-label="Search" style="width: 44px; height: 44px; border: 0; background: transparent; color: #F2F4F7; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></button>
+  </header>
+
+  <h2 style="margin: 4px 18px 10px; font-size: 16px; font-weight: 700">Your channels</h2>
+  <div style="display: flex; gap: 14px; padding: 0 18px">
+    <sc-for list="{{joined}}" as="j" hint-placeholder-count="4">
+      <a href="B-Channel.dc.html" style="flex: none; width: 70px; text-align: center; text-decoration: none; color: #D6DBE2; font-size: 11px">
+        <span style="display: block; width: 70px; height: 70px; border-radius: 8px; background: url({{j.img}}) center/cover"></span>
+        <span style="display: block; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{j.name}}</span>
+      </a>
+    </sc-for>
+  </div>
+
+  <h2 style="margin: 22px 18px 10px; font-size: 16px; font-weight: 700">Discover channels</h2>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 18px">
+    <sc-for list="{{all}}" as="c" hint-placeholder-count="6">
+      <a href="B-Channel.dc.html" style="position: relative; display: block; height: 118px; border-radius: 8px; overflow: hidden; background: url({{c.img}}) center/cover; text-decoration: none; color: #F2F4F7">
+        <span style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0) 65%)"></span>
+        <span style="position: absolute; left: 10px; bottom: 8px; right: 10px">
+          <span style="display: block; font-size: 14px; font-weight: 700">{{c.name}}</span>
+          <span style="display: block; font-size: 11px; color: #C9CED6">{{c.followers}} followers</span>
+        </span>
+        <span style="position: absolute; top: 8px; right: 8px; height: 26px; padding: 0 10px; border-radius: 4px; background: #F2F4F7; color: #0B1016; font-size: 12px; font-weight: 700; display: flex; align-items: center">+ Join</span>
+      </a>
+    </sc-for>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 0; right: 0; bottom: 0; height: 70px; background: rgba(11,16,22,0.97); border-top: 1px solid #1C2530; display: flex; align-items: center; justify-content: space-around; padding-bottom: 6px">
+    <sc-for list="{{nav}}" as="n" hint-placeholder-count="5">
+      <a href="{{n.href}}" style="width: 64px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: {{n.color}}; font-size: 11px; font-weight: {{n.weight}}; text-decoration: none">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{n.icon}}"></path></svg>{{n.label}}</a>
+    </sc-for>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#E50914","#00A8E1","#F5B400"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const tabs = [
+      ['Cloud', 'B-Explore.dc.html', 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z'],
+      ['Feed', 'B-Explore.dc.html', 'M4 5h16v10H4zM8 19h8'],
+      ['Explore', 'B-Explore.dc.html', 'M3 11 12 4l9 7v9h-6v-6H9v6H3z'],
+      ['Channels', 'B-Channels.dc.html', 'M3 6h18v13H3zM8 2l4 4 4-4'],
+      ['Profile', 'B-Explore.dc.html', 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c1.5-4 4.5-6 8-6s6.5 2 8 6']
+    ];
+    return {
+      accent: this.props.accent ?? '#FF7A1A',
+      joined: [
+        { name: 'Web Series', img: 'img/a1.jpg' },
+        { name: 'Comedy', img: 'img/a3.jpg' },
+        { name: 'Travel Vlogs', img: 'img/a5.jpg' },
+        { name: 'Sci-fi', img: 'img/a7.jpg' }
+      ],
+      all: [
+        { name: 'Shorts', followers: '4.2K', img: 'img/t2.jpg' },
+        { name: 'Music', followers: '2.1K', img: 'img/t6.jpg' },
+        { name: 'Cooking', followers: '1.3K', img: 'img/t5.jpg' },
+        { name: 'Nature', followers: '8.7K', img: 'img/t1.jpg' },
+        { name: 'Ocean Docs', followers: '3.9K', img: 'img/t3.jpg' },
+        { name: 'Road Trips', followers: '5.0K', img: 'img/t7.jpg' }
+      ],
+      nav: tabs.map(([label, href, icon]) => ({ label, href, icon, color: label === 'Channels' ? '#F2F4F7' : '#7B8594', weight: label === 'Channels' ? 700 : 500 }))
+    };
+  }
+}
+</script>
+</body>
+</html>

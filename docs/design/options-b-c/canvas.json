@@ -1,0 +1,232 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-11-20T09:00:00Z"
+ },
+ "title": "Flixvault App Redesign · 3 options",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "1 · Explore (home)"
+  },
+  "Feed.dc.html": {
+   "x": 470,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "2 · Feed"
+  },
+  "Channels.dc.html": {
+   "x": 940,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "3 · Channels"
+  },
+  "Channel.dc.html": {
+   "x": 1410,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "4 · Channel page"
+  },
+  "Post.dc.html": {
+   "x": 0,
+   "y": 964,
+   "w": 390,
+   "h": 844,
+   "title": "5 · Video details"
+  },
+  "Player.dc.html": {
+   "x": 470,
+   "y": 964,
+   "w": 390,
+   "h": 844,
+   "title": "6 · Player (preview + Skip)"
+  },
+  "Premium.dc.html": {
+   "x": 940,
+   "y": 964,
+   "w": 390,
+   "h": 844,
+   "title": "7 · Premium plans"
+  },
+  "Payment.dc.html": {
+   "x": 1410,
+   "y": 964,
+   "w": 390,
+   "h": 844,
+   "title": "8 · Payment status"
+  },
+  "Cloud.dc.html": {
+   "x": 0,
+   "y": 1928,
+   "w": 390,
+   "h": 844,
+   "title": "9 · Cloud"
+  },
+  "Profile.dc.html": {
+   "x": 470,
+   "y": 1928,
+   "w": 390,
+   "h": 844,
+   "title": "10 · Profile"
+  },
+  "Login.dc.html": {
+   "x": 940,
+   "y": 1928,
+   "w": 390,
+   "h": 844,
+   "title": "11 · Log in"
+  },
+  "B-Explore.dc.html": {
+   "x": 0,
+   "y": 3160,
+   "w": 390,
+   "h": 844,
+   "title": "B · Explore"
+  },
+  "B-Channels.dc.html": {
+   "x": 470,
+   "y": 3160,
+   "w": 390,
+   "h": 844,
+   "title": "B · Channels"
+  },
+  "B-Channel.dc.html": {
+   "x": 940,
+   "y": 3160,
+   "w": 390,
+   "h": 844,
+   "title": "B · Channel page"
+  },
+  "B-Post.dc.html": {
+   "x": 1410,
+   "y": 3160,
+   "w": 390,
+   "h": 844,
+   "title": "B · Video details"
+  },
+  "B-Premium.dc.html": {
+   "x": 1880,
+   "y": 3160,
+   "w": 390,
+   "h": 844,
+   "title": "B · Premium plans"
+  },
+  "C-Explore.dc.html": {
+   "x": 0,
+   "y": 4360,
+   "w": 390,
+   "h": 844,
+   "title": "C · Explore"
+  },
+  "C-Channels.dc.html": {
+   "x": 470,
+   "y": 4360,
+   "w": 390,
+   "h": 844,
+   "title": "C · Channels"
+  },
+  "C-Channel.dc.html": {
+   "x": 940,
+   "y": 4360,
+   "w": 390,
+   "h": 844,
+   "title": "C · Channel page"
+  },
+  "C-Post.dc.html": {
+   "x": 1410,
+   "y": 4360,
+   "w": 390,
+   "h": 844,
+   "title": "C · Video details"
+  },
+  "C-Premium.dc.html": {
+   "x": 1880,
+   "y": 4360,
+   "w": 390,
+   "h": 844,
+   "title": "C · Premium plans"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Feed.dc.html",
+  "Channels.dc.html",
+  "Channel.dc.html",
+  "Post.dc.html",
+  "Player.dc.html",
+  "Premium.dc.html",
+  "Payment.dc.html",
+  "Cloud.dc.html",
+  "Profile.dc.html",
+  "Login.dc.html",
+  "B-Explore.dc.html",
+  "B-Channels.dc.html",
+  "B-Channel.dc.html",
+  "B-Post.dc.html",
+  "B-Premium.dc.html",
+  "C-Explore.dc.html",
+  "C-Channels.dc.html",
+  "C-Channel.dc.html",
+  "C-Post.dc.html",
+  "C-Premium.dc.html"
+ ],
+ "notes": {
+  "title": {
+   "x": 0,
+   "y": -300,
+   "text": "Option A — Cinematic (saved design, 11 screens)",
+   "kind": "title1",
+   "maxW": 1800
+  },
+  "about": {
+   "x": 1410,
+   "y": 1928,
+   "w": 390,
+   "fill": "orange",
+   "size": "m",
+   "text": "Design direction: cinematic streaming look, kept on the Flixvault orange.\n\n• Deeper black background, bigger posters, content in rows like streaming apps.\n• Space Grotesk headings + Inter text.\n• Same 5 tabs (Cloud, Feed, Explore, Channels, Profile), Explore in the centre.\n• Same rules: ads users see previews, organic users go to plans, UPI payments unchanged.\n\nPictures are samples. Your real posters and thumbnails show in their place.\n\nComment on any screen to change it. Approve and I'll build it in the app."
+  },
+  "optB": {
+   "x": 0,
+   "y": 2900,
+   "text": "Option B — Big-screen streaming (Netflix / Prime style)",
+   "kind": "title1",
+   "maxW": 2400
+  },
+  "optC": {
+   "x": 0,
+   "y": 4100,
+   "text": "Option C — Anime app + chat channels (Crunchyroll / Telegram style)",
+   "kind": "title1",
+   "maxW": 2400
+  },
+  "aboutB": {
+   "x": 2350,
+   "y": 3160,
+   "w": 390,
+   "fill": "yellow",
+   "size": "m",
+   "text": "Option B\n\n• Full-screen poster at the top with Preview / Details buttons.\n• Top 10 row with big numbers, Continue watching with progress bars.\n• Deep blue-black background, bold condensed titles.\n• Flat bottom bar, same 5 tabs.\n• Channels shown as picture tiles."
+  },
+  "aboutC": {
+   "x": 2350,
+   "y": 4360,
+   "w": 390,
+   "fill": "orange",
+   "size": "m",
+   "text": "Option C\n\n• Explore: sharp poster grid with crown badges for premium.\n• Channels work like a chat app: list with unread counts, channel page shows posts as message bubbles with views, JOIN bar at the bottom.\n• Pure black background, bold rounded text, square orange buttons."
+  }
+ },
+ "designSystems": []
+}
