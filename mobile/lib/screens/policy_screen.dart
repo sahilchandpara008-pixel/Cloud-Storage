@@ -35,7 +35,7 @@ const policies = {
         'account. This removes your profile, files and channel memberships. Payment records are kept as required '
         'for accounting and fraud prevention.\n\n'
         'Children\n'
-        'You must be 18 or older, or use ${Config.appName} with a parent\'s or guardian\'s consent.\n\n'
+        'You must be 18 or older to use ${Config.appName}.\n\n'
         'Contact\n'
         'Questions or requests about your data: ${Config.supportEmail}. To ask for account deletion without '
         'the app, use ${Config.website}/delete-account.',
@@ -43,6 +43,7 @@ const policies = {
   'terms': (
     'Terms & Conditions',
     'By using ${Config.appName} you agree to these terms.\n\n'
+        '• You must be 18 or older to use ${Config.appName}.\n'
         '• Use the app lawfully. Upload only content you own or have the right to share.\n'
         '• Channels you create are reviewed before they become visible. You are responsible for what you post. '
         'We may hide or remove content, channels or accounts that break these terms or our Community Guidelines.\n'

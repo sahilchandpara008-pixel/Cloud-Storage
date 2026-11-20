@@ -15,7 +15,7 @@ class Config {
   // utm_source=meta&utm_medium=paid_social&utm_campaign=apk_download
   static const apkReferrer = String.fromEnvironment('APK_REFERRER');
 
-  static const policyVersion = 'v2';
+  static const policyVersion = 'v3';
   static const appName = 'Flixvault';
   static const supportEmail = 'info.flixvault@gmail.com';
   static const website = 'https://flixvault-app.vercel.app';

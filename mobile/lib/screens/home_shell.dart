@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../config.dart';
 import '../services/payments.dart';
@@ -221,9 +222,21 @@ class _FloatingNav extends StatelessWidget {
   }
 }
 
-/// First-launch Terms & Privacy dialog.
+/// First-launch 18+ disclaimer: age, guidelines, content ownership and the
+/// Terms & Privacy links. "Agree" saves consent; "Not agree" closes the app.
 class ConsentDialog extends StatelessWidget {
   const ConsentDialog({super.key});
+
+  static const _points = [
+    'You must be at least 18 years old to install and use ${Config.appName}.',
+    'You are responsible for everything done with your account.',
+    'Follow our Community Guidelines. If you don\'t, your content may be '
+        'removed and your account may be limited or suspended.',
+    'Videos are posted by channels on ${Config.appName}. Copyrights belong to '
+        'their owners. If you own content that was posted without your '
+        'permission, use Report in the app or email us with proof of '
+        'ownership and we will remove it.',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -232,80 +245,171 @@ class ConsentDialog extends StatelessWidget {
     return PopScope(
       canPop: false,
       child: Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: AppColors.border),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              decoration: const BoxDecoration(gradient: AppColors.gradient),
-              padding: const EdgeInsets.all(24),
-              child: const Row(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
+              child: Row(
                 children: [
-                  Icon(
-                    Icons.cloud_upload_rounded,
-                    color: Colors.white,
-                    size: 44,
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '18+',
+                      style: TextStyle(
+                        fontFamily: AppFonts.display,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.ink,
+                      ),
+                    ),
                   ),
-                  SizedBox(width: 16),
-                  Text(
-                    Config.appName,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Disclaimer',
+                          style: TextStyle(
+                            fontFamily: AppFonts.display,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Please read before you continue',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(22, 18, 22, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final p in _points)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              margin: const EdgeInsets.only(top: 8, right: 12),
+                              decoration: const BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                p,
+                                style: const TextStyle(
+                                  fontSize: 14.5,
+                                  height: 1.5,
+                                  color: Color(0xFFD4D4D8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Text(
+                      'Contact: ${Config.supportEmail}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.muted,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 4,
+                      children: [
+                        TextButton(
+                          onPressed: () => open('terms'),
+                          child: const Text('Terms & Conditions'),
+                        ),
+                        TextButton(
+                          onPressed: () => open('privacy'),
+                          child: const Text('Privacy Policy'),
+                        ),
+                        TextButton(
+                          onPressed: () => open('community'),
+                          child: const Text('Community Guidelines'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+              padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Terms of Service and Privacy Policy',
+                    'By tapping Agree you confirm you are 18 or older and '
+                    'accept the Terms and Privacy Policy.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                    style: TextStyle(fontSize: 12, color: AppColors.subtle),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Welcome! By using this app, you agree to how we collect, use and protect your data, '
-                    'and to your rights and responsibilities as a user. Please review:',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.muted,
-                      fontSize: 14,
-                      height: 1.5,
-                    ),
-                  ),
-                  Wrap(
-                    alignment: WrapAlignment.center,
+                  const SizedBox(height: 14),
+                  Row(
                     children: [
-                      TextButton(
-                        onPressed: () => open('privacy'),
-                        child: const Text('Privacy Policy'),
+                      Expanded(
+                        flex: 2,
+                        child: OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 52),
+                          ),
+                          // Under 18 or doesn't accept: leave the app.
+                          onPressed: () => SystemNavigator.pop(),
+                          child: const Text('Not agree'),
+                        ),
                       ),
-                      TextButton(
-                        onPressed: () => open('terms'),
-                        child: const Text('Terms & Conditions'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 3,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(0, 52),
+                          ),
+                          onPressed: () async {
+                            await app.acceptConsent();
+                            if (context.mounted) Navigator.of(context).pop();
+                          },
+                          child: const Text('I am 18+, Agree'),
+                        ),
                       ),
                     ],
                   ),
                 ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    await app.acceptConsent();
-                    if (context.mounted) Navigator.of(context).pop();
-                  },
-                  child: const Text('Agree'),
-                ),
               ),
             ),
           ],
