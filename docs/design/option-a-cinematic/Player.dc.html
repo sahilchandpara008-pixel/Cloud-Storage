@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flixvault · Player</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#000}
+a{color:#FF9A4D}a:hover{color:#FFB37A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #000 url(img/p1.jpg) center/cover; color: #F4F4F6; font-family: Inter, system-ui, sans-serif">
+  <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0.1) 22%, rgba(0,0,0,0.1) 62%, rgba(0,0,0,0.92))"></div>
+
+  <div style="position: absolute; top: 14px; left: 14px; right: 14px; display: flex; align-items: center; gap: 10px">
+    <a href="Post.dc.html" aria-label="Close player" style="width: 44px; height: 44px; border-radius: 14px; background: rgba(0,0,0,0.45); color: #F4F4F6; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></a>
+    <div style="flex: 1; min-width: 0">
+      <p style="margin: 0; font-size: 15px; font-weight: 600">Midnight Run · Part 1</p>
+      <p style="margin: 1px 0 0; font-size: 12px; color: #D4D4D8">Web Series</p>
+    </div>
+    <span style="padding: 4px 8px; border-radius: 8px; background: {{accent}}; color: #1A1005; font-size: 11px; font-weight: 700">PREVIEW</span>
+  </div>
+
+  <div aria-hidden="true" style="position: absolute; left: 22px; top: 300px; width: 44px; height: 170px; border-radius: 22px; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 10px 0; gap: 8px">
+    <span style="width: 6px; height: 110px; border-radius: 3px; background: rgba(255,255,255,0.25); position: relative; overflow: hidden"><span style="position: absolute; left: 0; right: 0; bottom: 0; height: 70%; background: #F4F4F6"></span></span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4F4F6" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+  </div>
+  <div aria-hidden="true" style="position: absolute; right: 22px; top: 300px; width: 44px; height: 170px; border-radius: 22px; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 10px 0; gap: 8px">
+    <span style="width: 6px; height: 110px; border-radius: 3px; background: rgba(255,255,255,0.25); position: relative; overflow: hidden"><span style="position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: {{accent}}"></span></span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F4F4F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"></path></svg>
+  </div>
+  <p style="position: absolute; left: 0; right: 0; top: 480px; margin: 0; text-align: center; font-size: 12px; color: #D4D4D8">Swipe left side for brightness · right side for volume</p>
+
+  <div style="position: absolute; left: 0; right: 0; top: 360px; display: flex; align-items: center; justify-content: center; gap: 34px">
+    <button aria-label="Previous" style="width: 52px; height: 52px; border-radius: 50%; border: 0; background: rgba(0,0,0,0.45); color: #F4F4F6; display: flex; align-items: center; justify-content: center">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"></path></svg></button>
+    <button aria-label="Pause" style="width: 72px; height: 72px; border-radius: 50%; border: 0; background: {{accent}}; color: #1A1005; display: flex; align-items: center; justify-content: center">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"></path></svg></button>
+    <button aria-label="Next" style="width: 52px; height: 52px; border-radius: 50%; border: 0; background: rgba(0,0,0,0.45); color: #F4F4F6; display: flex; align-items: center; justify-content: center">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"></path></svg></button>
+  </div>
+
+  <button style="position: absolute; right: 16px; bottom: 210px; height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.6); color: #F4F4F6; font: inherit; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px">Skip
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 5v14l9-7zM15 5h2v14h-2z"></path></svg></button>
+
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 120px">
+    <div style="position: relative; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.22)">
+      <span style="position: absolute; left: 0; top: 0; bottom: 0; width: 28%; border-radius: 2px; background: {{accent}}"></span>
+      <span style="position: absolute; left: 28%; top: -5px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #F4F4F6"></span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #D4D4D8">
+      <span>0:34</span><span>Preview 2:00</span>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 16px; right: 16px; bottom: 24px; padding: 12px 14px; border-radius: 16px; background: rgba(20,20,24,0.9); border: 1px solid #26262E; display: flex; align-items: center; gap: 12px">
+    <span style="flex: 1; font-size: 13px; line-height: 1.4; color: #D4D4D8"><b style="color: #F4F4F6">Enjoying it?</b> Watch the full video with a plan.</span>
+    <a href="Premium.dc.html" style="height: 40px; padding: 0 16px; border-radius: 10px; background: {{accent}}; color: #1A1005; font-size: 13px; font-weight: 700; display: flex; align-items: center; text-decoration: none">Get plan</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#FF5A36","#F5B400","#7C5CFF"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#FF7A1A' };
+  }
+}
+</script>
+</body>
+</html>

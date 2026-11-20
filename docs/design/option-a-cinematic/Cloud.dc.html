@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flixvault · Cloud</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0C}
+a{color:#FF9A4D}a:hover{color:#FFB37A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0A0A0C; color: #F4F4F6; font-family: Inter, system-ui, sans-serif">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 12px">
+    <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.02em">My Cloud</h1>
+    <button style="height: 40px; padding: 0 14px; border-radius: 12px; border: 0; background: {{accent}}; color: #1A1005; font: inherit; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 6px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"></path></svg>Upload</button>
+  </header>
+
+  <div style="margin: 0 20px; padding: 16px; border-radius: 18px; background: linear-gradient(135deg, #1B1714, #141418); border: 1px solid #2A2420">
+    <div style="display: flex; align-items: baseline; justify-content: space-between">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">6.2 GB <span style="font-size: 14px; font-weight: 500; color: #A1A1AA">of 15 GB</span></span>
+      <span style="font-size: 12px; color: #A1A1AA">41% used</span>
+    </div>
+    <div style="display: flex; height: 8px; margin-top: 12px; border-radius: 4px; overflow: hidden; background: #26262E">
+      <span style="width: 22%; background: {{accent}}"></span>
+      <span style="width: 12%; background: #F5B400"></span>
+      <span style="width: 7%; background: #60A5FA"></span>
+    </div>
+    <div style="display: flex; gap: 14px; margin-top: 10px; font-size: 12px; color: #A1A1AA">
+      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 2px; background: {{accent}}"></span>Videos</span>
+      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 2px; background: #F5B400"></span>Photos</span>
+      <span style="display: flex; align-items: center; gap: 5px"><span style="width: 8px; height: 8px; border-radius: 2px; background: #60A5FA"></span>Files</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 16px 20px 0">
+    <sc-for list="{{folders}}" as="f" hint-placeholder-count="3">
+      <div style="padding: 12px; border-radius: 16px; background: #141418; border: 1px solid #26262E">
+        <span style="width: 34px; height: 34px; border-radius: 10px; background: {{f.bg}}; color: {{f.fg}}; display: flex; align-items: center; justify-content: center">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+        </span>
+        <p style="margin: 10px 0 0; font-size: 14px; font-weight: 600">{{f.name}}</p>
+        <p style="margin: 1px 0 0; font-size: 12px; color: #A1A1AA">{{f.count}}</p>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 20px 10px">
+    <h2 style="margin: 0; font-size: 16px; font-weight: 600">Recent uploads</h2>
+    <a href="#" style="font-size: 13px; font-weight: 600; text-decoration: none">See all</a>
+  </div>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 0 20px">
+    <sc-for list="{{recent}}" as="r" hint-placeholder-count="6">
+      <span style="position: relative; display: block; height: 104px; border-radius: 12px; background: #1E1B22 url({{r.img}}) center/cover">
+        <sc-if value="{{r.time}}" hint-placeholder-val="{{false}}">
+          <span style="position: absolute; right: 5px; bottom: 5px; padding: 1px 5px; border-radius: 5px; background: rgba(0,0,0,0.75); font-size: 10px">{{r.time}}</span>
+        </sc-if>
+      </span>
+    </sc-for>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 12px; right: 12px; bottom: 14px; height: 68px; border-radius: 22px; background: #141418; border: 1px solid #26262E; display: flex; align-items: center; justify-content: space-around; padding: 0 6px">
+    <a href="Cloud.dc.html" aria-current="page" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: {{accent}}; font-size: 11px; font-weight: 700; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"></path></svg>Cloud</a>
+    <a href="Feed.dc.html" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A94; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg>Feed</a>
+    <a href="Main.dc.html" style="width: 64px; height: 52px; border-radius: 16px; background: #1F1F25; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #D4D4D8; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>Explore</a>
+    <a href="Channels.dc.html" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A94; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="m8 2 4 4 4-4"></path></svg>Channels</a>
+    <a href="Profile.dc.html" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A94; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Profile</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#FF5A36","#F5B400","#7C5CFF"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#FF7A1A',
+      folders: [
+        { name: 'Videos', count: '48 files', bg: 'rgba(255,122,26,0.15)', fg: '#FF9A4D' },
+        { name: 'Photos', count: '312 files', bg: 'rgba(245,180,0,0.15)', fg: '#F5B400' },
+        { name: 'Files', count: '27 files', bg: 'rgba(96,165,250,0.15)', fg: '#60A5FA' }
+      ],
+      recent: [
+        { img: 'img/t3.jpg', time: '0:48' },
+        { img: 'img/t1.jpg', time: '' },
+        { img: 'img/t5.jpg', time: '' },
+        { img: 'img/t7.jpg', time: '2:10' },
+        { img: 'img/t6.jpg', time: '' },
+        { img: 'img/t2.jpg', time: '1:05' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

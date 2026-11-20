@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flixvault · Profile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0C}
+a{color:#FF9A4D}a:hover{color:#FFB37A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0A0A0C; color: #F4F4F6; font-family: Inter, system-ui, sans-serif">
+
+  <header style="padding: 18px 20px 12px">
+    <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.02em">Profile</h1>
+  </header>
+
+  <div style="display: flex; align-items: center; gap: 14px; padding: 0 20px">
+    <span style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, {{accent}}, #FF5A36); color: #1A1005; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700">R</span>
+    <div style="flex: 1; min-width: 0">
+      <p style="margin: 0; font-size: 18px; font-weight: 600">Rahul</p>
+      <p style="margin: 2px 0 0; font-size: 13px; color: #A1A1AA">rahul@example.com</p>
+    </div>
+    <button aria-label="Edit profile" style="width: 44px; height: 44px; border-radius: 14px; border: 1px solid #26262E; background: #141418; color: #F4F4F6; display: flex; align-items: center; justify-content: center">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"></path></svg></button>
+  </div>
+
+  <div style="position: relative; margin: 18px 20px 0; padding: 16px; border-radius: 18px; overflow: hidden; background: #1B1410; border: 1px solid rgba(255,122,26,0.35)">
+    <div aria-hidden="true" style="position: absolute; inset: 0; background: url(img/h1.jpg) center/cover; opacity: 0.28"></div>
+    <div style="position: relative; display: flex; align-items: center; gap: 12px">
+      <span style="width: 42px; height: 42px; border-radius: 12px; background: {{accent}}; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#1A1005" aria-hidden="true"><path d="m12 2 3 7 7 .6-5.3 4.7 1.6 7.2L12 17.8 5.7 21.5l1.6-7.2L2 9.6 9 9z"></path></svg>
+      </span>
+      <div style="flex: 1">
+        <p style="margin: 0; font-size: 15px; font-weight: 700">Gold plan</p>
+        <p style="margin: 2px 0 0; font-size: 12px; color: #E4E4E7">Active until 20 Dec 2026 · 30 days left</p>
+      </div>
+      <a href="Premium.dc.html" style="height: 36px; padding: 0 12px; border-radius: 10px; background: rgba(255,255,255,0.12); color: #F4F4F6; font-size: 13px; font-weight: 600; display: flex; align-items: center; text-decoration: none">Extend</a>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 14px 20px 0">
+    <div style="padding: 12px; border-radius: 14px; background: #141418; border: 1px solid #26262E; text-align: center"><p style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">3</p><p style="margin: 2px 0 0; font-size: 12px; color: #A1A1AA">Channels</p></div>
+    <div style="padding: 12px; border-radius: 14px; background: #141418; border: 1px solid #26262E; text-align: center"><p style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">6.2 GB</p><p style="margin: 2px 0 0; font-size: 12px; color: #A1A1AA">Cloud used</p></div>
+    <div style="padding: 12px; border-radius: 14px; background: #141418; border: 1px solid #26262E; text-align: center"><p style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">24</p><p style="margin: 2px 0 0; font-size: 12px; color: #A1A1AA">Watched</p></div>
+  </div>
+
+  <ul style="list-style: none; margin: 16px 20px 0; padding: 0; border-radius: 18px; background: #141418; border: 1px solid #26262E; overflow: hidden">
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+      <li style="display: flex; align-items: center; gap: 12px; height: 52px; padding: 0 14px; border-bottom: 1px solid #1F1F25">
+        <span style="width: 32px; height: 32px; border-radius: 10px; background: #1F1F25; color: #D4D4D8; display: flex; align-items: center; justify-content: center">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{r.icon}}"></path></svg>
+        </span>
+        <span style="flex: 1; font-size: 14px; color: {{r.color}}">{{r.label}}</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5A64" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+      </li>
+    </sc-for>
+  </ul>
+
+  <nav aria-label="Main" style="position: absolute; left: 12px; right: 12px; bottom: 14px; height: 68px; border-radius: 22px; background: #141418; border: 1px solid #26262E; display: flex; align-items: center; justify-content: space-around; padding: 0 6px">
+    <a href="Cloud.dc.html" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A94; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"></path></svg>Cloud</a>
+    <a href="Feed.dc.html" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A94; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg>Feed</a>
+    <a href="Main.dc.html" style="width: 64px; height: 52px; border-radius: 16px; background: #1F1F25; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #D4D4D8; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>Explore</a>
+    <a href="Channels.dc.html" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A94; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="m8 2 4 4 4-4"></path></svg>Channels</a>
+    <a href="Profile.dc.html" aria-current="page" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: {{accent}}; font-size: 11px; font-weight: 700; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Profile</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#FF5A36","#F5B400","#7C5CFF"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#FF7A1A',
+      rows: [
+        { label: 'Payment history', icon: 'M3 7h18v12H3zM3 11h18', color: '#F4F4F6' },
+        { label: 'Downloads', icon: 'M12 4v12M6 11l6 6 6-6M4 20h16', color: '#F4F4F6' },
+        { label: 'Help & support', icon: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.7M12 17h.01', color: '#F4F4F6' },
+        { label: 'Privacy policy', icon: 'M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z', color: '#F4F4F6' },
+        { label: 'Log out', icon: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10', color: '#F87171' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

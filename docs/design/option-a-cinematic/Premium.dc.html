@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flixvault · Premium</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0C}
+a{color:#FF9A4D}a:hover{color:#FFB37A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0A0A0C; color: #F4F4F6; font-family: Inter, system-ui, sans-serif">
+
+  <div aria-hidden="true" style="position: absolute; top: -20px; left: -30px; right: -30px; height: 250px; display: flex; gap: 8px; transform: rotate(-6deg); opacity: 0.55">
+    <span style="flex: 1; border-radius: 12px; background: url(img/p1.jpg) center/cover"></span>
+    <span style="flex: 1; border-radius: 12px; background: url(img/p4.jpg) center/cover; margin-top: 30px"></span>
+    <span style="flex: 1; border-radius: 12px; background: url(img/p2.jpg) center/cover"></span>
+    <span style="flex: 1; border-radius: 12px; background: url(img/p5.jpg) center/cover; margin-top: 30px"></span>
+    <span style="flex: 1; border-radius: 12px; background: url(img/p7.jpg) center/cover"></span>
+  </div>
+  <div aria-hidden="true" style="position: absolute; top: 0; left: 0; right: 0; height: 260px; background: linear-gradient(to bottom, rgba(10,10,12,0.2), #0A0A0C 92%)"></div>
+
+  <a href="Post.dc.html" aria-label="Back" style="position: absolute; top: 14px; left: 14px; width: 44px; height: 44px; border-radius: 14px; background: rgba(10,10,12,0.6); color: #F4F4F6; display: flex; align-items: center; justify-content: center">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></a>
+
+  <div style="position: relative; padding: 150px 20px 0">
+    <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: rgba(255,122,26,0.15); border: 1px solid rgba(255,122,26,0.4); color: #FFB37A; font-size: 12px; font-weight: 600">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m12 2 3 7 7 .6-5.3 4.7 1.6 7.2L12 17.8 5.7 21.5l1.6-7.2L2 9.6 9 9z"></path></svg>Flixvault Premium</span>
+    <h1 style="margin: 10px 0 0; font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15">Watch every video in full</h1>
+    <p style="margin: 6px 0 0; font-size: 14px; color: #A1A1AA">No previews, no limits. Pay once with UPI.</p>
+  </div>
+
+  <div role="radiogroup" aria-label="Plans" style="position: relative; display: flex; flex-direction: column; gap: 8px; padding: 18px 20px 0">
+    <sc-for list="{{plans}}" as="p" hint-placeholder-count="5">
+      <div role="radio" aria-checked="{{p.sel}}" style="position: relative; display: flex; align-items: center; gap: 12px; padding: 0 14px; height: 62px; border-radius: 16px; background: {{p.bg}}; border: {{p.border}}">
+        <span style="flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid {{p.ring}}; display: flex; align-items: center; justify-content: center">
+          <sc-if value="{{p.sel}}" hint-placeholder-val="{{false}}"><span style="width: 10px; height: 10px; border-radius: 50%; background: {{accent}}"></span></sc-if>
+        </span>
+        <span style="flex: 1">
+          <span style="display: block; font-size: 15px; font-weight: 600">{{p.name}}</span>
+          <span style="display: block; font-size: 12px; color: #A1A1AA">{{p.days}} · {{p.perDay}}</span>
+        </span>
+        <sc-if value="{{p.tag}}" hint-placeholder-val="{{false}}">
+          <span style="position: absolute; top: -9px; right: 14px; padding: 2px 8px; border-radius: 6px; background: {{accent}}; color: #1A1005; font-size: 10px; font-weight: 800; letter-spacing: 0.04em">{{p.tag}}</span>
+        </sc-if>
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">₹{{p.price}}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 20px 22px; background: linear-gradient(to top, #0A0A0C 70%, rgba(10,10,12,0))">
+    <a href="Payment.dc.html" style="height: 54px; border-radius: 16px; background: {{accent}}; color: #1A1005; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none">Pay ₹259 with UPI</a>
+    <p style="margin: 10px 0 0; text-align: center; font-size: 12px; color: #8A8A94">Works with any UPI app · Activates after payment is confirmed</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#FF5A36","#F5B400","#7C5CFF"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#FF7A1A';
+    const list = [
+      { name: 'Trial', price: 49, d: 3 },
+      { name: 'Silver', price: 129, d: 7 },
+      { name: 'Gold', price: 259, d: 30, tag: 'MOST POPULAR', sel: true },
+      { name: 'Platinum', price: 599, d: 180 },
+      { name: 'Diamond', price: 999, d: 365, tag: 'BEST VALUE' }
+    ];
+    return {
+      accent,
+      plans: list.map((p) => ({
+        ...p,
+        sel: !!p.sel,
+        tag: p.tag || '',
+        days: p.d + ' days',
+        perDay: '₹' + (p.price / p.d).toFixed(p.price / p.d < 10 ? 1 : 0) + '/day',
+        bg: p.sel ? 'rgba(255,122,26,0.10)' : '#141418',
+        border: p.sel ? '1.5px solid ' + accent : '1px solid #26262E',
+        ring: p.sel ? accent : '#3A3A44'
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

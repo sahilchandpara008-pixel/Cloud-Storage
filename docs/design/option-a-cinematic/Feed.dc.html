@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flixvault · Feed</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0C}
+a{color:#FF9A4D}a:hover{color:#FFB37A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0A0A0C; color: #F4F4F6; font-family: Inter, system-ui, sans-serif">
+
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 12px">
+    <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.02em">Feed</h1>
+    <span style="font-size: 13px; color: #A1A1AA">From channels you joined</span>
+  </header>
+
+  <div style="display: flex; flex-direction: column; gap: 14px; padding: 0 16px">
+    <sc-for list="{{posts}}" as="p" hint-placeholder-count="2">
+      <article style="border-radius: 20px; background: #141418; border: 1px solid #26262E; overflow: hidden">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px">
+          <span style="width: 36px; height: 36px; border-radius: 50%; background: #2A2026 url({{p.avatar}}) center/cover; border: 1.5px solid {{accent}}"></span>
+          <div style="flex: 1; min-width: 0">
+            <p style="margin: 0; font-size: 14px; font-weight: 600">{{p.channel}}</p>
+            <p style="margin: 1px 0 0; font-size: 12px; color: #A1A1AA">{{p.followers}} followers</p>
+          </div>
+          <button aria-label="More options" style="width: 44px; height: 44px; border: 0; background: transparent; color: #A1A1AA; display: flex; align-items: center; justify-content: center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+          </button>
+        </div>
+        <a href="Post.dc.html" style="display: block; position: relative; height: 196px; background: #1D1A20 url({{p.thumb}}) center/cover; border-top: 1px solid #26262E; border-bottom: 1px solid #26262E">
+          <span style="position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(10,10,12,0.75); border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#F4F4F6" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+          </span>
+          <sc-if value="{{p.premium}}" hint-placeholder-val="{{true}}">
+            <span style="position: absolute; top: 10px; left: 10px; padding: 4px 8px; border-radius: 8px; background: {{accent}}; color: #1A1005; font-size: 11px; font-weight: 700">PREMIUM · PREVIEW</span>
+          </sc-if>
+          <span style="position: absolute; right: 10px; bottom: 10px; padding: 2px 7px; border-radius: 6px; background: rgba(0,0,0,0.75); font-size: 12px; color: #F4F4F6">{{p.time}}</span>
+        </a>
+        <div style="padding: 12px 14px 14px">
+          <h2 style="margin: 0; font-size: 16px; font-weight: 600">{{p.title}}</h2>
+          <p style="margin: 6px 0 0; font-size: 13px; color: #A1A1AA; line-height: 1.45">{{p.caption}} <a href="Post.dc.html" style="font-weight: 600; text-decoration: none">see more</a></p>
+        </div>
+      </article>
+    </sc-for>
+  </div>
+
+  <nav aria-label="Main" style="position: absolute; left: 12px; right: 12px; bottom: 14px; height: 68px; border-radius: 22px; background: #141418; border: 1px solid #26262E; display: flex; align-items: center; justify-content: space-around; padding: 0 6px">
+    <a href="Cloud.dc.html" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A94; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"></path></svg>Cloud</a>
+    <a href="Feed.dc.html" aria-current="page" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: {{accent}}; font-size: 11px; font-weight: 700; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"></path></svg>Feed</a>
+    <a href="Main.dc.html" style="width: 64px; height: 52px; border-radius: 16px; background: #1F1F25; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #D4D4D8; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>Explore</a>
+    <a href="Channels.dc.html" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A94; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2"></rect><path d="m8 2 4 4 4-4"></path></svg>Channels</a>
+    <a href="Profile.dc.html" style="width: 60px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #8A8A94; font-size: 11px; text-decoration: none">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Profile</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#FF5A36","#F5B400","#7C5CFF"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#FF7A1A',
+      posts: [
+        { channel: 'Web Series', followers: '15K', avatar: 'img/a1.jpg', thumb: 'img/t1.jpg', title: 'Echo Peak · Episode 4', caption: 'The story picks up where last week left off, with a', time: '28:40', premium: true },
+        { channel: 'Shorts', followers: '4.2K', avatar: 'img/a2.jpg', thumb: 'img/t2.jpg', title: 'Long Road · one-minute short', caption: 'A quick one shot in a single take on a busy street', time: '1:12', premium: false }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

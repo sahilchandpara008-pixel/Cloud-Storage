@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flixvault · Video details</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0C}
+a{color:#FF9A4D}a:hover{color:#FFB37A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0A0A0C; color: #F4F4F6; font-family: Inter, system-ui, sans-serif">
+
+  <a href="Player.dc.html" style="display: block; position: relative; height: 240px; background: #1D1A20 url(img/h1.jpg) center/cover">
+    <span style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(10,10,12,0.3), rgba(10,10,12,0) 35%, rgba(10,10,12,0.2) 70%, rgba(10,10,12,1))"></span>
+    <span style="position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; background: {{accent}}; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 30px rgba(255,122,26,0.45)">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="#1A1005" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg>
+    </span>
+    <span style="position: absolute; left: 16px; bottom: 14px; padding: 4px 8px; border-radius: 8px; background: rgba(0,0,0,0.7); font-size: 12px; color: #F4F4F6">Preview · 2:00</span>
+  </a>
+  <a href="Feed.dc.html" aria-label="Back" style="position: absolute; top: 14px; left: 14px; width: 44px; height: 44px; border-radius: 14px; background: rgba(10,10,12,0.6); color: #F4F4F6; display: flex; align-items: center; justify-content: center">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></a>
+
+  <div style="padding: 6px 20px 0">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <span style="padding: 3px 8px; border-radius: 6px; background: {{accent}}; color: #1A1005; font-size: 11px; font-weight: 700">PREMIUM</span>
+      <span style="font-size: 12px; color: #A1A1AA">Web series · 42 min</span>
+    </div>
+    <h1 style="margin: 10px 0 0; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.01em">Midnight Run</h1>
+
+    <a href="Channel.dc.html" style="display: flex; align-items: center; gap: 10px; margin-top: 12px; text-decoration: none; color: #F4F4F6">
+      <span style="width: 36px; height: 36px; border-radius: 50%; background: #2A2026 url(img/a1.jpg) center/cover; border: 1.5px solid {{accent}}"></span>
+      <span style="flex: 1">
+        <span style="display: block; font-size: 14px; font-weight: 600">Web Series</span>
+        <span style="display: block; font-size: 12px; color: #A1A1AA">15K followers</span>
+      </span>
+      <span style="height: 34px; padding: 0 14px; border-radius: 10px; border: 1px solid #3A3A44; font-size: 13px; font-weight: 600; display: flex; align-items: center; color: #D4D4D8">Joined</span>
+    </a>
+
+    <p style="margin: 14px 0 0; font-size: 14px; line-height: 1.55; color: #C4C4CC">A late-night driver takes one last job across the city and finds the passenger is not who she says she is. <a href="#" style="font-weight: 600; text-decoration: none">see more</a></p>
+
+    <div style="margin-top: 16px; padding: 14px; border-radius: 16px; background: linear-gradient(135deg, rgba(255,122,26,0.16), rgba(255,122,26,0.04)); border: 1px solid rgba(255,122,26,0.35); display: flex; align-items: center; gap: 12px">
+      <span style="width: 40px; height: 40px; border-radius: 12px; background: {{accent}}; display: flex; align-items: center; justify-content: center; flex: none">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1005" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+      </span>
+      <span style="flex: 1; font-size: 13px; line-height: 1.4; color: #E4E4E7"><b style="color: #F4F4F6">You're watching a preview.</b><br>Get a plan to watch the full video.</span>
+      <a href="Premium.dc.html" style="height: 38px; padding: 0 14px; border-radius: 10px; background: {{accent}}; color: #1A1005; font-size: 13px; font-weight: 700; display: flex; align-items: center; text-decoration: none">See plans</a>
+    </div>
+
+    <h2 style="margin: 20px 0 10px; font-size: 16px; font-weight: 600">In this post · 3</h2>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <sc-for list="{{items}}" as="it" hint-placeholder-count="3">
+        <a href="Player.dc.html" style="display: flex; align-items: center; gap: 12px; text-decoration: none; color: #F4F4F6">
+          <span style="position: relative; flex: none; width: 112px; height: 63px; border-radius: 10px; background: #1E1B22 url({{it.img}}) center/cover; border: 1px solid #26262E">
+            <span style="position: absolute; right: 5px; bottom: 5px; padding: 1px 5px; border-radius: 5px; background: rgba(0,0,0,0.75); font-size: 10px">{{it.time}}</span>
+          </span>
+          <span style="flex: 1; min-width: 0">
+            <span style="display: block; font-size: 14px; font-weight: 500">{{it.title}}</span>
+            <span style="display: block; margin-top: 2px; font-size: 12px; color: #A1A1AA">{{it.note}}</span>
+          </span>
+        </a>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#FF5A36","#F5B400","#7C5CFF"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#FF7A1A',
+      items: [
+        { title: 'Part 1 · The pickup', time: '14:20', note: 'Preview available', img: 'img/t2.jpg' },
+        { title: 'Part 2 · Wrong turn', time: '13:55', note: 'Premium', img: 'img/t7.jpg' },
+        { title: 'Part 3 · Sunrise', time: '13:40', note: 'Premium', img: 'img/t3.jpg' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

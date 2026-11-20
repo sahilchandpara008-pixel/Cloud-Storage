@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flixvault · Channel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0A0A0C}
+a{color:#FF9A4D}a:hover{color:#FFB37A}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #0A0A0C; color: #F4F4F6; font-family: Inter, system-ui, sans-serif">
+
+  <div style="position: relative; height: 190px; background: #1D1A20 url(img/t1.jpg) center/cover">
+    <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(10,10,12,0.35), rgba(10,10,12,0) 40%, rgba(10,10,12,1))"></div>
+    <a href="Channels.dc.html" aria-label="Back" style="position: absolute; top: 14px; left: 14px; width: 44px; height: 44px; border-radius: 14px; background: rgba(10,10,12,0.6); color: #F4F4F6; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></a>
+    <button aria-label="Share" style="position: absolute; top: 14px; right: 14px; width: 44px; height: 44px; border-radius: 14px; border: 0; background: rgba(10,10,12,0.6); color: #F4F4F6; display: flex; align-items: center; justify-content: center">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13"></path></svg></button>
+  </div>
+
+  <div style="padding: 0 20px; margin-top: -44px; position: relative">
+    <div style="display: flex; align-items: flex-end; gap: 14px">
+      <span style="width: 84px; height: 84px; border-radius: 24px; background: #2A2026 url(img/a1.jpg) center/cover; border: 3px solid #0A0A0C; box-shadow: 0 0 0 2px {{accent}}"></span>
+      <div style="padding-bottom: 6px">
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -0.01em">Web Series</h1>
+        <p style="margin: 2px 0 0; font-size: 13px; color: #A1A1AA">15K followers</p>
+      </div>
+    </div>
+    <p style="margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: #C4C4CC">New episodes of original drama series, every week.</p>
+    <div style="display: flex; gap: 10px; margin-top: 14px">
+      <button style="flex: 1; height: 48px; border: 0; border-radius: 14px; background: {{accent}}; color: #1A1005; font: inherit; font-size: 15px; font-weight: 700">Join channel</button>
+      <button aria-label="Notifications" style="width: 48px; height: 48px; border-radius: 14px; border: 1px solid #26262E; background: #141418; color: #F4F4F6; display: flex; align-items: center; justify-content: center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg></button>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 22px; padding: 18px 20px 0; border-bottom: 1px solid #1F1F25">
+    <span style="padding-bottom: 10px; border-bottom: 2px solid {{accent}}; font-size: 14px; font-weight: 600">Videos</span>
+    <span style="padding-bottom: 10px; font-size: 14px; color: #8A8A94">About</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 14px 20px">
+    <sc-for list="{{videos}}" as="v" hint-placeholder-count="6">
+      <a href="Post.dc.html" style="display: block; text-decoration: none; color: #F4F4F6">
+        <span style="position: relative; display: block; height: 156px; border-radius: 12px; background: #1E1B22 url({{v.img}}) center/cover; border: 1px solid #26262E">
+          <sc-if value="{{v.premium}}" hint-placeholder-val="{{true}}">
+            <span style="position: absolute; top: 6px; left: 6px; width: 22px; height: 22px; border-radius: 7px; background: {{accent}}; display: flex; align-items: center; justify-content: center" aria-label="Premium">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#1A1005" aria-hidden="true"><path d="m12 2 3 7 7 .6-5.3 4.7 1.6 7.2L12 17.8 5.7 21.5l1.6-7.2L2 9.6 9 9z"></path></svg>
+            </span>
+          </sc-if>
+          <span style="position: absolute; right: 6px; bottom: 6px; padding: 1px 5px; border-radius: 5px; background: rgba(0,0,0,0.75); font-size: 10px">{{v.time}}</span>
+        </span>
+        <span style="display: block; margin-top: 6px; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{v.title}}</span>
+      </a>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#FF7A1A","options":["#FF7A1A","#FF5A36","#F5B400","#7C5CFF"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? '#FF7A1A',
+      videos: [
+        { title: 'Midnight Run', time: '42:10', premium: true, img: 'img/p1.jpg' },
+        { title: 'Desert Line', time: '38:05', premium: true, img: 'img/p2.jpg' },
+        { title: 'Deep Blue', time: '12:45', premium: false, img: 'img/p3.jpg' },
+        { title: 'Echo Peak', time: '31:02', premium: true, img: 'img/p4.jpg' },
+        { title: 'The Trail', time: '22:40', premium: false, img: 'img/p6.jpg' },
+        { title: 'Long Road', time: '27:18', premium: true, img: 'img/p7.jpg' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
