@@ -337,8 +337,8 @@ select t.ok((select installs from public.attribution_report() where source = 'me
             'report counts installs per source and campaign');
 select t.ok((select registrations from public.attribution_report() where source = 'meta' and campaign = 'diwali') = 1,
             'report counts registrations');
-select t.ok((select buyers from public.attribution_report() where source = 'direct') = 1,
-            'report counts buyers');
+select t.ok(coalesce((select buyers from public.attribution_report() where source = 'direct'), 0) = 0,
+            'report: a free plan granted by an admin is not a purchase (buyers come from paid orders)');
 
 reset role;
 
