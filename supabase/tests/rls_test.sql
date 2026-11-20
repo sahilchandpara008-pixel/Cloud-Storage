@@ -977,6 +977,7 @@ set role authenticated;
 select t.act_as('content_admin');
 select t.fails($$select * from public.admin_buyers()$$, 'content admin cannot list buyers');
 select t.fails($$select * from public.admin_plan_sales()$$, 'content admin cannot see plan sales');
+select t.fails($$select public.admin_payment_orders_totals()$$, 'content admin cannot see order totals');
 select t.act_as('owner');
 select t.ok((select count(*) from public.admin_payment_orders_filtered('all')) =
             (select count(*) from public.admin_payment_orders('all')), 'filtered orders: all matches');
@@ -988,6 +989,16 @@ select t.ok((select count(*) from public.admin_payment_orders_filtered('all', nu
             'filtered orders: date range');
 select t.ok((select amount_paise from public.admin_payment_orders_filtered('all', null, null, null, null, 'amount_desc') limit 1) =
             (select max(amount_paise) from public.payment_orders), 'filtered orders: sort by amount');
+select t.ok((select count(*) from public.admin_payment_orders_list('all')) =
+            (select count(*) from public.payment_orders), 'orders list: all orders');
+select t.ok((select bool_and(admin_test = public.is_admin_user(user_id)) from public.admin_payment_orders_list('all')),
+            'orders list: admin test orders are marked');
+select t.ok((public.admin_payment_orders_totals('all')->>'orders')::int =
+            (select count(*) from public.payment_orders), 'order totals: count every order');
+select t.ok((public.admin_payment_orders_totals('success')->>'received_paise')::bigint =
+            (select coalesce(sum(amount_paise), 0) from public.payment_orders o
+              where o.status = 'approved' and not public.is_admin_user(o.user_id)),
+            'order totals: received leaves admin test payments out');
 select t.ok((select sum(purchases) from public.admin_plan_sales()) =
             (select count(*) from public.payment_orders where status = 'approved'), 'plan sales count approved purchases');
 select t.ok((select sum(purchases) from public.admin_buyers()) =

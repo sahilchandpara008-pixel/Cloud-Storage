@@ -16,6 +16,7 @@ import {
   Th,
 } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
+import { dayEnd, dayStart, isDate } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
 import { markPaid, revokePayment, savePlay, saveSettings } from "./actions";
 
@@ -41,6 +42,7 @@ type Order = {
   verified_at: string | null;
   plan_id: string;
   user_purchases: number;
+  admin_test: boolean;
 };
 
 type PlanSales = {
@@ -107,15 +109,6 @@ const sorts = [
   { value: "plan", label: "Plan" },
 ];
 
-const isDate = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v);
-// Dates in the filters are Indian dates (whole days, IST).
-const dayStart = (v?: string) => (isDate(v) ? `${v}T00:00:00+05:30` : null);
-const dayEnd = (v?: string) => {
-  if (!isDate(v)) return null;
-  const d = new Date(`${v}T00:00:00+05:30`);
-  d.setDate(d.getDate() + 1);
-  return d.toISOString();
-};
 const isUuid = (v?: string) => !!v && /^[0-9a-f-]{36}$/i.test(v);
 
 function query(sp: SP, patch: Partial<SP>) {
@@ -416,17 +409,25 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       </>
     );
   } else {
-    const { data, error } = await supabase.rpc("admin_payment_orders_filtered", {
+    const filter = {
       p_status: status,
       p_plan: plan ?? null,
       p_user: user ?? null,
       p_from: dayStart(sp.from),
       p_to: dayEnd(sp.to),
-      p_sort: sort,
-      p_limit: 500,
-    });
+    };
+    const [{ data, error }, { data: totalsRow }] = await Promise.all([
+      supabase.rpc("admin_payment_orders_list", { ...filter, p_sort: sort, p_limit: 500 }),
+      supabase.rpc("admin_payment_orders_totals", filter),
+    ]);
     loadError = error?.message;
     const orders = (data ?? []) as Order[];
+    const totals = (totalsRow ?? {}) as {
+      orders?: number;
+      successful?: number;
+      received_paise?: number;
+      test_orders?: number;
+    };
     const { data: playRows } = orders.length
       ? await supabase.rpc("admin_play_report_rows", {
           p_ids: orders.map((o) => o.id),
@@ -441,7 +442,6 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         }[]
       ).map((r) => [r.id, r]),
     );
-    const approved = orders.filter((o) => o.status === "approved");
     body = (
       <>
         <SegmentTabs
@@ -496,9 +496,9 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         )}
         <div className="mb-4 grid grid-cols-3 gap-3">
           {[
-            ["Orders", String(orders.length)],
-            ["Successful", String(approved.length)],
-            ["Received", `₹${rupees(approved.reduce((a, o) => a + o.amount_paise, 0))}`],
+            ["Orders", String(totals.orders ?? orders.length)],
+            ["Successful", String(totals.successful ?? 0)],
+            ["Received", `₹${rupees(Number(totals.received_paise ?? 0))}`],
           ].map(([label, value]) => (
             <div key={label} className="rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
               <p className="text-xs font-medium text-gray-500">{label}</p>
@@ -506,6 +506,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
             </div>
           ))}
         </div>
+        <p className="-mt-2 mb-4 text-xs text-gray-500">
+          {status === "success" ? "Dates are when the payment was approved." : "Dates are when the order was made."}{" "}
+          Successful and Received leave out your own test payments
+          {totals.test_orders ? ` (${totals.test_orders} test payment${totals.test_orders === 1 ? "" : "s"} here)` : ""}.
+          {(totals.orders ?? 0) > orders.length && ` The list shows the first ${orders.length} orders.`}
+        </p>
         {orders.length === 0 ? (
           <Empty>No orders.</Empty>
         ) : (
@@ -560,6 +566,11 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
                     </Td>
                     <Td>
                       <OrderStatus status={o.status} />
+                      {o.admin_test && (
+                        <span className="ml-1">
+                          <Badge>Admin test</Badge>
+                        </span>
+                      )}
                       {o.status_reason && <p className="mt-1 max-w-48 text-xs text-gray-500">{o.status_reason}</p>}
                       {playStatus.has(o.id) && (
                         <p className="mt-1">

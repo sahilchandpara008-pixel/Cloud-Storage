@@ -22,18 +22,35 @@ async function savePlan(id: string, formData: FormData) {
     .split("\n")
     .map((p) => p.trim())
     .filter(Boolean);
-  const { error } = await supabase
+  const name = String(formData.get("name") ?? "").trim();
+  const price = Number(String(formData.get("price_inr") ?? "").trim());
+  const days = Number(String(formData.get("duration_days") ?? "").trim());
+  const position = Number(String(formData.get("position") ?? "0").trim() || "0");
+  // A blank, zero or decimal price would break UPI payments in the app.
+  if (!name) redirect(withMessage("/plans", "error", "Enter the plan name."));
+  if (!Number.isInteger(price) || price < 1 || price > 100000) {
+    redirect(withMessage("/plans", "error", "Price must be a whole number of rupees, at least ₹1."));
+  }
+  if (!Number.isInteger(days) || days < 1 || days > 3650) {
+    redirect(withMessage("/plans", "error", "Duration must be a whole number of days (1 to 3650)."));
+  }
+  if (!Number.isInteger(position)) redirect(withMessage("/plans", "error", "Order must be a whole number."));
+  const { error, count } = await supabase
     .from("plans")
-    .update({
-      name: String(formData.get("name") ?? "").trim(),
-      price_inr: Number(formData.get("price_inr")),
-      duration_days: Number(formData.get("duration_days")),
-      position: Number(formData.get("position")),
+    .update(
+      {
+      name,
+      price_inr: price,
+      duration_days: days,
+      position,
       active: formData.get("active") === "on",
       perks,
-    })
+      },
+      { count: "exact" },
+    )
     .eq("id", id);
   if (error) redirect(withMessage("/plans", "error", error.message));
+  if (count === 0) redirect(withMessage("/plans", "error", "Plan not found, or you don't have permission."));
   revalidatePath("/plans");
   redirect(withMessage("/plans", "ok", "Plan saved."));
 }
@@ -136,7 +153,8 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
                   <Input
                     name="price_inr"
                     type="number"
-                    min={0}
+                    min={1}
+                    step={1}
                     defaultValue={p.price_inr}
                     required
                     className="tabular-nums"

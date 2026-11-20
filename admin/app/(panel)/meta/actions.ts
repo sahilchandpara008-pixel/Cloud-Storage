@@ -9,7 +9,12 @@ import { withMessage } from "@/lib/format";
 // Send one real test event with this Pixel ID and token, exactly the way the
 // app's events are sent. "ok" = Meta received it; a string = Meta's error to
 // show the owner; null = Meta could not be reached from here.
-async function checkWithMeta(pixel: string, token: string, pageUrl: string): Promise<"ok" | string | null> {
+async function checkWithMeta(
+  pixel: string,
+  token: string,
+  pageUrl: string,
+  testCode: string | null,
+): Promise<"ok" | string | null> {
   try {
     const res = await fetch(
       `https://graph.facebook.com/v21.0/${pixel}/events?access_token=${encodeURIComponent(token)}`,
@@ -33,6 +38,9 @@ async function checkWithMeta(pixel: string, token: string, pageUrl: string): Pro
               custom_data: { content_type: "test", content_ids: ["connect"] },
             },
           ],
+          // With a test code the check shows under Test events only and is
+          // not counted with real events.
+          ...(testCode ? { test_event_code: testCode } : {}),
         }),
       },
     );
@@ -57,15 +65,17 @@ export async function connectMeta(formData: FormData) {
   if (!/^[0-9]{5,20}$/.test(pixel)) {
     redirect(withMessage("/meta", "error", "Enter the Pixel ID. It is a number; find it in Meta Events Manager."));
   }
-  let token = typed;
-  if (!token) {
-    const { data } = await supabase.from("meta_settings").select("access_token").eq("id", 1).maybeSingle();
-    token = (data as { access_token?: string | null } | null)?.access_token ?? "";
-  }
+  const { data: saved } = await supabase
+    .from("meta_settings")
+    .select("access_token, test_event_code")
+    .eq("id", 1)
+    .maybeSingle();
+  const current = (saved ?? {}) as { access_token?: string | null; test_event_code?: string | null };
+  const token = typed || current.access_token || "";
   if (!token) redirect(withMessage("/meta", "error", "Paste the Conversions API access token."));
 
   const website = /^https?:\/\//.test(origin) ? `${origin}/d` : "https://flixvault-app.vercel.app/d";
-  const check = await checkWithMeta(pixel, token, website);
+  const check = await checkWithMeta(pixel, token, website, current.test_event_code ?? null);
   if (check !== "ok" && check !== null) {
     redirect(withMessage("/meta", "error", `Meta did not accept this Pixel ID and token: ${check}`));
   }

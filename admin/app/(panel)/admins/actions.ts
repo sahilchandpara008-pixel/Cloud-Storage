@@ -13,6 +13,8 @@ export async function addAdmin(formData: FormData) {
   const role = String(formData.get("role") ?? "content_admin");
   const channelIds = formData.getAll("channels").map(String);
 
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect(withMessage("/admins", "error", "Enter a valid email address."));
+  if (role !== "owner" && role !== "content_admin") redirect(withMessage("/admins", "error", "Pick a role."));
   if (password.length < 8) redirect(withMessage("/admins", "error", "Password must be at least 8 characters."));
 
   // Creating a login needs the Auth admin API (service role, server only).
@@ -29,7 +31,12 @@ export async function addAdmin(formData: FormData) {
   const { error } = await supabase
     .from("admins")
     .insert({ user_id: created.user.id, role, invited_by: user.id });
-  if (error) redirect(withMessage("/admins", "error", error.message));
+  if (error) {
+    // Don't leave a login behind that has no admin access: a retry with the
+    // same email would then fail with "already registered".
+    await service.auth.admin.deleteUser(created.user.id);
+    redirect(withMessage("/admins", "error", error.message));
+  }
 
   if (role === "content_admin" && channelIds.length > 0) {
     await supabase

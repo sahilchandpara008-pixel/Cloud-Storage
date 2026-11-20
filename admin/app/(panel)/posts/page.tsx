@@ -67,13 +67,14 @@ export default async function PostsPage({
   else if (sp.sort === "title") query = query.order("title", { ascending: true });
   else if (sp.sort === "published") query = query.order("published_at", { ascending: false, nullsFirst: false });
   else query = query.order("created_at", { ascending: false });
-  if (sp.channel) query = query.eq("channel_id", sp.channel);
-  if (sp.folder) query = query.eq("folder_id", sp.folder);
+  const isUuid = (v?: string) => !!v && /^[0-9a-f-]{36}$/i.test(v);
+  if (isUuid(sp.channel)) query = query.eq("channel_id", sp.channel!);
+  if (isUuid(sp.folder)) query = query.eq("folder_id", sp.folder!);
   if (sp.audience) query = query.eq("audience", sp.audience);
   if (sp.status) query = query.eq("status", sp.status);
   const q = sp.q?.trim();
   if (q) query = query.ilike("title", `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
-  const { data } = await query;
+  const { data, error: loadError } = await query;
   const rows = (data ?? []) as unknown as Row[];
 
   const now = Date.now();
@@ -92,7 +93,7 @@ export default async function PostsPage({
           </div>
         }
       />
-      <Flash ok={sp.ok} error={sp.error} />
+      <Flash ok={sp.ok} error={sp.error ?? loadError?.message} />
 
       <DatePresets
         className="mb-3"

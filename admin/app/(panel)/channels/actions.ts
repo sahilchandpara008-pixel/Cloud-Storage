@@ -121,13 +121,14 @@ export async function addFolder(channelId: string, formData: FormData) {
 export async function updateFolder(channelId: string, folderId: string, formData: FormData) {
   const { supabase } = await requireAdmin();
   const back = `/channels/${channelId}`;
+  const name = String(formData.get("name") ?? "").trim();
+  const position = Number(String(formData.get("position") ?? "0").trim() || "0");
+  if (!name) redirect(withMessage(back, "error", "Folder name is required."));
+  if (!Number.isInteger(position)) redirect(withMessage(back, "error", "Order must be a whole number."));
   const { error, count } = await supabase
     .from("channel_folders")
     .update(
-      {
-        name: String(formData.get("name") ?? "").trim(),
-        position: Number(formData.get("position") ?? 0),
-      },
+      { name, position },
       { count: "exact" },
     )
     .eq("id", folderId);
