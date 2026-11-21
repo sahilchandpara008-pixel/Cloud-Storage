@@ -62,3 +62,34 @@ export async function cancelPush(id: string) {
   revalidatePath("/notifications");
   redirect(withMessage("/notifications?tab=history", "ok", "Scheduled message cancelled."));
 }
+
+const AUTO_KINDS = ["payment_reminder", "payment_approved", "plan_ending", "come_back", "new_videos"];
+
+// Automatic messages: on/off, title and text (and for new videos: who, how often).
+export async function saveAuto(kind: string, formData: FormData) {
+  const { supabase } = await requireOwner();
+  if (!AUTO_KINDS.includes(kind)) redirect(withMessage("/notifications?tab=auto", "error", "Unknown message type."));
+  const get = (k: string) => String(formData.get(k) ?? "").trim();
+  const mode = get("nv_mode");
+  const hours = Number(get("interval_hours"));
+  const { error } = await supabase.rpc("admin_push_auto_save", {
+    p_kind: kind,
+    p_enabled: formData.get("enabled") === "on",
+    p_title: get("title"),
+    p_body: get("body"),
+    p_nv_mode: mode === "members" || mode === "all" ? mode : null,
+    p_interval_hours: Number.isInteger(hours) && hours >= 1 && hours <= 48 ? hours : null,
+  });
+  if (error) redirect(withMessage("/notifications?tab=auto", "error", error.message));
+  revalidatePath("/notifications");
+  redirect(withMessage("/notifications?tab=auto", "ok", "Saved."));
+}
+
+export async function saveChannelMode(channelId: string, formData: FormData) {
+  const { supabase } = await requireOwner();
+  const mode = String(formData.get("mode") ?? "default");
+  const { error } = await supabase.rpc("admin_push_channel_mode", { p_channel_id: channelId, p_mode: mode });
+  if (error) redirect(withMessage("/notifications?tab=auto", "error", error.message));
+  revalidatePath("/notifications");
+  redirect(withMessage("/notifications?tab=auto", "ok", "Channel setting saved."));
+}

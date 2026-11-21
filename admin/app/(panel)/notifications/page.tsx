@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { PushAuto, type AutoSettings } from "@/components/push-auto";
 import { PushComposer } from "@/components/push-composer";
 import { Badge, Button, Empty, Flash, PageHeader, Stat, Table, Td, Th } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
-import { cancelPush, sendPush } from "./actions";
+import { cancelPush, saveAuto, saveChannelMode, sendPush } from "./actions";
 
 type Msg = {
   id: string;
@@ -43,6 +44,15 @@ const AUDIENCE_LABEL: Record<string, string> = {
   test: "Test (my phone)",
 };
 
+const KIND_LABEL: Record<string, string> = {
+  manual: "Manual",
+  new_videos: "New videos",
+  payment_reminder: "Payment reminder",
+  payment_approved: "Payment approved",
+  plan_ending: "Plan ending",
+  come_back: "Come back",
+};
+
 const when = (iso: string | null) =>
   iso
     ? new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
@@ -53,6 +63,7 @@ function Tabs({ tab }: { tab: string }) {
     <nav className="mb-6 inline-flex max-w-full flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1">
       {[
         ["send", "New message"],
+        ["auto", "Automatic"],
         ["history", "History"],
       ].map(([k, l]) => (
         <Link
@@ -83,9 +94,9 @@ export default async function NotificationsPage({
   searchParams: Promise<{ tab?: string; ok?: string; error?: string }>;
 }) {
   const sp = await searchParams;
-  const tab = sp.tab === "history" ? "history" : "send";
+  const tab = sp.tab === "history" || sp.tab === "auto" ? sp.tab : "send";
   const { supabase } = await requireOwner();
-  const [{ data: ov }, { data: posts }, { data: channels }, keySet] = await Promise.all([
+  const [{ data: ov }, { data: posts }, { data: channels }, keySet, { data: auto }] = await Promise.all([
     supabase.rpc("admin_push_overview", { p_limit: 100 }),
     supabase
       .from("posts")
@@ -95,6 +106,7 @@ export default async function NotificationsPage({
       .limit(500),
     supabase.from("channels").select("id, name").order("name"),
     firebaseKeySet(),
+    supabase.rpc("admin_push_auto_get"),
   ]);
   const o = (ov ?? {}) as Overview;
   const messages = o.messages ?? [];
@@ -108,7 +120,9 @@ export default async function NotificationsPage({
         subtitle={
           tab === "send"
             ? "Send a message with an image to people's phones — new releases, offers and announcements."
-            : "Every message sent or scheduled, and how many people tapped it."
+            : tab === "auto"
+              ? "Messages the app sends by itself. Turn each one on or off and edit its text."
+              : "Every message sent or scheduled, and how many people tapped it."
         }
       />
       <Flash ok={sp.ok} error={sp.error} />
@@ -125,7 +139,9 @@ export default async function NotificationsPage({
       )}
       <Tabs tab={tab} />
 
-      {tab === "send" ? (
+      {tab === "auto" ? (
+        <PushAuto data={(auto ?? { kinds: {}, channels: [], sent_7d: {} }) as AutoSettings} saveAuto={saveAuto} saveChannelMode={saveChannelMode} />
+      ) : tab === "send" ? (
         <PushComposer
           action={sendPush}
           posts={(posts ?? []).map((p) => ({ id: p.id as string, name: p.title as string }))}
@@ -156,6 +172,7 @@ export default async function NotificationsPage({
                   <Th>When</Th>
                   <Th>Message</Th>
                   <Th>To</Th>
+                  <Th>Type</Th>
                   <Th>Status</Th>
                   <Th>Sent</Th>
                   <Th>Tapped</Th>
@@ -170,7 +187,20 @@ export default async function NotificationsPage({
                       <p className="font-semibold text-gray-900">{m.title}</p>
                       {m.body && <p className="max-w-md truncate text-xs text-gray-500">{m.body}</p>}
                     </Td>
-                    <Td>{AUDIENCE_LABEL[m.audience] ?? m.audience}</Td>
+                    <Td>
+                      {m.kind === "manual"
+                        ? (AUDIENCE_LABEL[m.audience] ?? m.audience)
+                        : m.kind === "new_videos"
+                          ? m.audience === "channels"
+                            ? "Channel members"
+                            : "All app users"
+                          : "1 person"}
+                    </Td>
+                    <Td>
+                      <Badge tone={m.kind === "manual" ? "blue" : m.kind === "new_videos" ? "gray" : "green"}>
+                        {KIND_LABEL[m.kind] ?? m.kind}
+                      </Badge>
+                    </Td>
                     <Td>
                       {m.status === "scheduled" ? (
                         <Badge tone="amber">Scheduled</Badge>

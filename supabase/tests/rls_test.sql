@@ -1049,7 +1049,8 @@ select public.admin_set_recommended_plan(null);
 select t.ok((select count(*) = 0 from public.plans where recommended), 'recommended plan can be cleared');
 reset role;
 
--- Push notifications
+-- Push notifications (automatic ones are tested separately below)
+update public.push_auto set enabled = false;
 insert into public.installs (install_id, referrer_status, source, first_user_id)
 values ('99999999-0000-0000-0000-0000000000f1', 'apk', 'organic', t.id('owner'));
 set role authenticated;
@@ -1148,6 +1149,76 @@ reset role;
 set role anon;
 select t.fails($$select public.push_claim(10)$$, 'the sender queue is not public');
 reset role;
+
+-- Automatic push messages
+update public.push_auto set enabled_at = now() - interval '1 day', enabled = true;
+update public.push_settings set storage_base = 'https://example.supabase.co/storage/v1/object/public/public/' where id = 1;
+set role authenticated;
+select t.act_as('ads_user');
+select public.register_push_token('99999999-0000-0000-0000-000000000001', 'tokAuto_1234567890:abcdefghijklmn');
+reset role;
+-- payment approved / reminder
+insert into public.payment_orders (reference, user_id, plan_id, amount_paise, status, verified_at)
+select 'AUTO1', t.id('ads_user'), id, price_inr * 100, 'approved', now() from public.plans order by position limit 1;
+select public.push_auto_tick();
+select t.ok((select count(*) = 1 from public.push_messages
+              where dedupe_key = (select 'approved:' || id from public.payment_orders where reference = 'AUTO1') and target_user = t.id('ads_user') and title like 'Your % is active%'),
+            'auto: payment approved message for that user');
+select public.push_auto_tick();
+select t.ok((select count(*) = 1 from public.push_messages where dedupe_key = (select 'approved:' || id from public.payment_orders where reference = 'AUTO1')),
+            'auto: each payment is announced once');
+insert into public.payment_orders (reference, user_id, plan_id, amount_paise, status, created_at)
+select 'AUTO2', t.id('organic_user'), id, price_inr * 100, 'initiated', now() - interval '2 hours'
+  from public.plans order by position limit 1;
+select public.push_auto_tick();
+select t.ok((select count(*) = 0 from public.push_messages where kind = 'payment_reminder' and target_user = t.id('organic_user')),
+            'auto: no reminder for a user without a registered phone');
+-- new videos
+insert into public.channels (id, name, audience, status) values
+  ('aaaaaaaa-0000-0000-0000-00000000c001', 'Auto Channel', 'all', 'published');
+insert into public.posts (id, channel_id, title, audience, status, published_at) values
+  ('aaaaaaaa-0000-0000-0000-00000000d001', 'aaaaaaaa-0000-0000-0000-00000000c001', 'Episode 1', 'all', 'published', now()),
+  ('aaaaaaaa-0000-0000-0000-00000000d002', 'aaaaaaaa-0000-0000-0000-00000000c001', 'Ads only ep', 'ads', 'published', now());
+insert into public.post_items (post_id, kind, is_premium, media_key, processing_status, thumb_key)
+values ('aaaaaaaa-0000-0000-0000-00000000d001', 'video', false, 'orig/x1', 'ready', 'thumbs/x1.jpg'),
+       ('aaaaaaaa-0000-0000-0000-00000000d002', 'video', false, 'orig/x2', 'ready', null);
+select public.push_auto_tick();
+select t.ok((select count(*) = 2 from public.push_messages where kind = 'new_videos'
+              and ref_id = 'aaaaaaaa-0000-0000-0000-00000000c001'),
+            'auto: new videos announced (one message for everyone, one for ads-only content)');
+select t.ok((select title = 'New in Auto Channel' and action_type = 'post'
+                    and image_url = 'https://example.supabase.co/storage/v1/object/public/public/thumbs/x1.jpg'
+                    and content_audience is null
+               from public.push_messages where kind = 'new_videos' and action_id = 'aaaaaaaa-0000-0000-0000-00000000d001'),
+            'auto: new video message has the title, thumbnail and opens the video');
+select t.ok((select content_audience = 'ads' from public.push_messages
+              where kind = 'new_videos' and action_id = 'aaaaaaaa-0000-0000-0000-00000000d002'),
+            'auto: ads-only video goes only to ads installs');
+insert into public.posts (id, channel_id, title, audience, status, published_at) values
+  ('aaaaaaaa-0000-0000-0000-00000000d003', 'aaaaaaaa-0000-0000-0000-00000000c001', 'Episode 2', 'all', 'published', now());
+insert into public.post_items (post_id, kind, is_premium, media_key, processing_status)
+values ('aaaaaaaa-0000-0000-0000-00000000d003', 'video', false, 'orig/x3', 'ready');
+select public.push_auto_tick();
+select t.ok((select count(*) = 2 from public.push_messages where kind = 'new_videos'
+              and ref_id = 'aaaaaaaa-0000-0000-0000-00000000c001'),
+            'auto: at most one message per channel every few hours');
+-- channel turned off
+set role authenticated;
+select t.act_as('owner');
+select public.admin_push_channel_mode('aaaaaaaa-0000-0000-0000-00000000c001', 'off');
+select t.ok((public.admin_push_auto_get()->'kinds'->'new_videos'->>'enabled')::boolean, 'admin reads automatic settings');
+select public.admin_push_auto_save('come_back', false, 'Come back', 'Hi');
+select t.act_as('organic_user');
+select t.fails($$select public.admin_push_auto_save('come_back', true, 'x', 'y')$$, 'app users cannot change automatic messages');
+reset role;
+-- queued per phone: targeted message reaches only that user's phone
+select public.push_tick();
+select t.ok((select count(*) = 1 from public.push_deliveries d join public.push_messages m on m.id = d.message_id
+              where m.dedupe_key = (select 'approved:' || id from public.payment_orders where reference = 'AUTO1') and d.install_id = '99999999-0000-0000-0000-000000000001'),
+            'auto: approved message queued for the buyer''s phone');
+select t.ok((select recipients = 1 from public.push_messages
+              where kind = 'new_videos' and action_id = 'aaaaaaaa-0000-0000-0000-00000000d002'),
+            'auto: ads-only video queued for the ads phone');
 set role authenticated;
 select t.act_as('owner');
 select t.ok((public.admin_payment_funnel()->'groups'->'all'->>'installs')::int =
