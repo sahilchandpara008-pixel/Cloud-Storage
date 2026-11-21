@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../config.dart';
 import '../services/payments.dart';
+import '../services/push.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import 'channels_screen.dart';
@@ -100,6 +101,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     // Right after "Agree" (or once for people who agreed in an older
     // version): Android's Allow / Don't allow notifications question.
     if (mounted && app.consentGiven) await app.askNotificationsOnce();
+    // A tapped push message that opened the app from closed.
+    if (mounted && app.consentGiven) await Push.openInitialMessage();
   }
 
   @override

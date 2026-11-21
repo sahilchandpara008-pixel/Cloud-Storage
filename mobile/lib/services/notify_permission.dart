@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'backend.dart';
+import 'push.dart';
 
 /// Notification permission. Asked once, right after the 18+ consent (ads and
 /// organic users alike; also once for people who agreed in an older version).
@@ -31,6 +32,8 @@ class NotifyPermission {
         status = await _ch.invokeMethod<String>('request');
       }
       await _report(prefs, installId, status);
+      // Token may only become useful now that the user answered.
+      await Push.register(prefs, installId);
     } catch (_) {}
   }
 

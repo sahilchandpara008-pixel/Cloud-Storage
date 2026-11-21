@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'config.dart';
 import 'screens/home_shell.dart';
+import 'services/push.dart';
 import 'state/app_state.dart';
 import 'theme.dart';
 import 'widgets/common.dart';
@@ -29,6 +30,8 @@ class CloudStorageApp extends StatelessWidget {
     return MaterialApp(
       title: Config.appName,
       debugShowCheckedModeBanner: false,
+      navigatorKey: Push.navigatorKey,
+      scaffoldMessengerKey: Push.messengerKey,
       theme: buildTheme(),
       // Keep layouts compact when the phone uses a very large font size.
       builder: (context, child) => MediaQuery(

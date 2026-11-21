@@ -66,6 +66,20 @@ class Backend {
     );
   }
 
+  static Future<void> registerPushToken(String installId, String token) async {
+    await sb.rpc(
+      'register_push_token',
+      params: {'p_install_id': installId, 'p_token': token},
+    );
+  }
+
+  static Future<void> pushOpened(String messageId, String installId) async {
+    await sb.rpc(
+      'push_opened',
+      params: {'p_message_id': messageId, 'p_install_id': installId},
+    );
+  }
+
   static Future<void> attributeUser(String installId) async {
     await sb.rpc('attribute_user', params: {'p_install_id': installId});
   }

@@ -16,6 +16,7 @@ const ICONS: Record<string, string> = {
   "/requests": "M4 4h16v12H8l-4 4z",
   "/payments": "M3 6h18v12H3zM3 10h18M7 15h3",
   "/plans": "M12 2 3 7l9 5 9-5zM3 12l9 5 9-5M3 17l9 5 9-5",
+  "/notifications": "M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0",
   "/meta": "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
   "/admins": "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1",
 };

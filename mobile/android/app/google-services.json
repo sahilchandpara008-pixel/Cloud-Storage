@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "843729577023",
+    "project_id": "flixvault-ed1f4",
+    "storage_bucket": "flixvault-ed1f4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:843729577023:android:7a3612609b560953dec48a",
+        "android_client_info": {
+          "package_name": "com.cloudstorage.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGdWxxIXMNqqkQg6ITHpIllzHx1M9cLTs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:843729577023:android:41beba9e582b88c0dec48a",
+        "android_client_info": {
+          "package_name": "com.flixvault.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGdWxxIXMNqqkQg6ITHpIllzHx1M9cLTs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

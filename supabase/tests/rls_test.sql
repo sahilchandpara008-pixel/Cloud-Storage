@@ -1048,6 +1048,94 @@ select t.act_as('owner');
 select public.admin_set_recommended_plan(null);
 select t.ok((select count(*) = 0 from public.plans where recommended), 'recommended plan can be cleared');
 reset role;
+
+-- Push notifications
+insert into public.installs (install_id, referrer_status, source, first_user_id)
+values ('99999999-0000-0000-0000-0000000000f1', 'apk', 'organic', t.id('owner'));
+set role authenticated;
+select t.act_as('ads_user');
+select public.record_notif_status('99999999-0000-0000-0000-000000000001', 'allowed');
+select public.register_push_token('99999999-0000-0000-0000-000000000001', 'tokA_1234567890:abcdefghijklmnop');
+select public.register_push_token('99999999-0000-0000-0000-000000000001', 'bad token with spaces!!');
+select t.act_as('owner');
+select public.register_push_token('99999999-0000-0000-0000-0000000000f1', 'tokOwner_1234567890:abcdefghij');
+reset role;
+select t.ok((select token = 'tokA_1234567890:abcdefghijklmnop' and user_id = t.id('ads_user')
+               from public.push_tokens where install_id = '99999999-0000-0000-0000-000000000001'),
+            'app saves the push token (bad tokens ignored)');
+set role authenticated;
+select t.act_as('organic_user');
+select public.register_push_token('99999999-0000-0000-0000-000000000001', 'tokHijack_1234567890:abcdefgh');
+select t.fails($$select public.admin_push_create('Hi', '', null, 'home', null, null, 'all')$$, 'app users cannot send notifications');
+select t.fails($$select * from public.push_tokens$$, 'app users cannot read push tokens');
+reset role;
+select t.ok((select token = 'tokA_1234567890:abcdefghijklmnop' from public.push_tokens
+              where install_id = '99999999-0000-0000-0000-000000000001'),
+            'another user cannot take over a phone''s token');
+set role authenticated;
+select t.act_as('owner');
+select t.ok(public.admin_push_reach('all') = 1, 'reach: only phones that allowed notifications (owner phone not allowed)');
+select t.ok(public.admin_push_reach('test') = 1, 'test messages go to the owner''s own phone');
+select t.ok(public.admin_push_reach('organic') = 0 and public.admin_push_reach('ads') = 1, 'reach: ads / organic split');
+select t.fails($$select public.admin_push_create('Hi', '', null, 'post', '', null, 'all')$$, 'a video message needs a video');
+select public.admin_push_create('New release', 'Watch now', 'https://example.com/a.jpg', 'post',
+                                '11111111-2222-3333-4444-555555555555', null, 'all');
+select public.admin_push_create('Later', '', null, 'home', null, null, 'all', '{}', now() + interval '1 day');
+reset role;
+select public.push_tick();
+select t.ok((select status = 'sending' and recipients = 1 from public.push_messages where title = 'New release'),
+            'due message is queued for each phone');
+select t.ok((select status = 'scheduled' from public.push_messages where title = 'Later'), 'scheduled message waits');
+set role service_role;
+select t.ok((select jsonb_array_length(public.push_claim(10)) = 1
+                    and public.push_claim(10) = '[]'::jsonb), 'sender claims each delivery once');
+reset role;
+select t.ok((select (x->>'title') = 'New release' and (x->>'target') = '11111111-2222-3333-4444-555555555555'
+               from public.push_deliveries d,
+                    lateral (select jsonb_build_object('title', m.title, 'target', m.action_id) x
+                               from public.push_messages m where m.id = d.message_id) y
+              where d.status = 'sending' limit 1),
+            'claimed delivery carries the message');
+set role service_role;
+select public.push_finish((select jsonb_agg(jsonb_build_object('id', id, 'ok', true)) from public.push_deliveries where status = 'sending'));
+reset role;
+select t.ok((select status = 'sent' from public.push_messages where title = 'New release'), 'message marked sent');
+select set_config('t.mid', (select id::text from public.push_messages where title = 'New release'), false);
+set role authenticated;
+select t.act_as('ads_user');
+select public.push_opened(current_setting('t.mid')::uuid, '99999999-0000-0000-0000-000000000001');
+select t.act_as('owner');
+select t.ok((select (m->>'sent')::int = 1 and (m->>'opened')::int = 1
+               from jsonb_array_elements(public.admin_push_overview()->'messages') m
+              where m->>'title' = 'New release'),
+            'history shows sent and tapped');
+reset role;
+select set_config('t.mid', (select id::text from public.push_messages where title = 'Later'), false);
+set role authenticated;
+select t.act_as('owner');
+select public.admin_push_cancel(current_setting('t.mid')::uuid);
+reset role;
+select t.ok((select status = 'cancelled' from public.push_messages where title = 'Later'), 'scheduled message can be cancelled');
+set role authenticated;
+select t.act_as('owner');
+select public.admin_push_create('Again', '', null, 'home', null, null, 'all');
+reset role;
+select public.push_tick();
+set role service_role;
+select public.push_finish((select jsonb_agg(jsonb_build_object('id', (x->>'id')::bigint, 'ok', false, 'unregistered', true))
+                             from jsonb_array_elements(public.push_claim(10)) x));
+reset role;
+select t.ok((select count(*) = 0 from public.push_tokens where install_id = '99999999-0000-0000-0000-000000000001'),
+            'uninstalled phone''s token is removed');
+set role authenticated;
+select t.act_as('organic_user');
+select t.fails($$select public.admin_push_kick()$$, 'app users cannot trigger sending');
+select t.act_as('owner');
+select public.admin_push_kick();
+reset role;
+set role anon;
+select t.fails($$select public.push_claim(10)$$, 'the sender queue is not public');
+reset role;
 set role authenticated;
 select t.act_as('owner');
 select t.ok((public.admin_payment_funnel()->'groups'->'all'->>'installs')::int =

@@ -15,6 +15,7 @@ import '../services/backend.dart';
 import '../services/blocks.dart';
 import '../services/meta_ids.dart';
 import '../services/notify_permission.dart';
+import '../services/push.dart';
 import '../services/payments.dart';
 import '../services/play_billing.dart';
 
@@ -87,6 +88,7 @@ class AppState extends ChangeNotifier {
       // Not awaited: never delays the app's start.
       unawaited(MetaIds.sync(_prefs, installId));
       unawaited(NotifyPermission.sync(_prefs, installId));
+      unawaited(Push.register(_prefs, installId));
       await refreshStatus();
       Backend.logEvent(installId, 'app_open');
 
@@ -164,6 +166,10 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> refreshStatus() async {
+    // After a log-in / log-out the push token moves to the new account.
+    try {
+      unawaited(Push.register(_prefs, installId));
+    } catch (_) {}
     try {
       var s = await Backend.status();
       // Google Play build: logged-in users get 15 GB of free cloud storage.

@@ -1,5 +1,7 @@
 plugins {
     id("com.android.application")
+    // Firebase config for both app ids (com.cloudstorage.app, com.flixvault.app).
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }

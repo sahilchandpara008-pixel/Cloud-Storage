@@ -45,6 +45,22 @@ class MainActivity : FlutterActivity() {
 
     private val store get() = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Channel for push messages (new releases, offers, payment updates):
+        // high importance so they pop up at the top of the screen.
+        if (Build.VERSION.SDK_INT >= 26) {
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            nm.createNotificationChannel(
+                android.app.NotificationChannel(
+                    "flixvault_updates",
+                    "New releases & offers",
+                    android.app.NotificationManager.IMPORTANCE_HIGH,
+                ),
+            )
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).apply {
