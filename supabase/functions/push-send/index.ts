@@ -4,7 +4,8 @@
 // and right after the owner presses Send in the admin panel. No login: it
 // takes NOTHING from the request; it only sends deliveries the database has
 // already queued (owner-only admin_push_create), so calling it can never
-// send anything new. GET returns whether the Firebase key is set (no secrets).
+// send anything new. GET returns whether the Firebase key is set (no secrets);
+// GET ?check=1 also tests the Firebase sign-in.
 //
 // Secret: FCM_SERVICE_ACCOUNT = the Firebase service-account JSON
 // (Firebase console -> Project settings -> Service accounts -> Generate key).
@@ -133,7 +134,19 @@ async function sendOne(a: Account, bearer: string, it: Item): Promise<Result> {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const a = serviceAccount();
-  if (req.method === "GET") return json({ key: !!a, project: a?.project_id ?? null });
+  if (req.method === "GET") {
+    // ?check=1 also signs in to Firebase (sends nothing) to prove the key works.
+    let login: string | undefined;
+    if (a && new URL(req.url).searchParams.get("check") === "1") {
+      try {
+        await accessToken(a);
+        login = "ok";
+      } catch (e) {
+        login = String(e).slice(0, 200);
+      }
+    }
+    return json({ key: !!a, project: a?.project_id ?? null, ...(login ? { login } : {}) });
+  }
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
