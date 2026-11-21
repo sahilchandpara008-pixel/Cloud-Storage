@@ -1036,6 +1036,20 @@ select t.fails($$select public.record_notif_status('99999999-0000-0000-0000-0000
 reset role;
 set role authenticated;
 select t.act_as('owner');
+select public.admin_set_recommended_plan((select id from public.plans order by position limit 1));
+select public.admin_set_recommended_plan((select id from public.plans order by position desc limit 1));
+select t.ok((select count(*) = 1 and bool_and(id = (select id from public.plans order by position desc limit 1))
+               from public.plans where recommended),
+            'only one plan is recommended at a time');
+select t.act_as('organic_user');
+select t.fails($$select public.admin_set_recommended_plan(null)$$, 'app users cannot change the recommended plan');
+select t.ok((select count(*) = 1 from public.plans where recommended), 'app users can read which plan is recommended');
+select t.act_as('owner');
+select public.admin_set_recommended_plan(null);
+select t.ok((select count(*) = 0 from public.plans where recommended), 'recommended plan can be cleared');
+reset role;
+set role authenticated;
+select t.act_as('owner');
 select t.ok((public.admin_payment_funnel()->'groups'->'all'->>'installs')::int =
             (select count(*) from public.installs i where i.first_user_id is null or not public.is_admin_user(i.first_user_id)),
             'payment funnel counts every install');

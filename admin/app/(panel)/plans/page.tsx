@@ -1,6 +1,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { Button, Card, Field, Flash, Input, PageHeader, Textarea } from "@/components/ui";
+import { Button, Card, Field, Flash, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { withMessage } from "@/lib/format";
 import { saveSettings } from "../payments/actions";
@@ -14,6 +14,7 @@ type Plan = {
   perks: string[];
   active: boolean;
   position: number;
+  recommended: boolean;
 };
 
 async function savePlan(id: string, formData: FormData) {
@@ -56,6 +57,22 @@ async function savePlan(id: string, formData: FormData) {
   redirect(withMessage("/plans", "ok", "Plan saved."));
 }
 
+async function saveRecommended(formData: FormData) {
+  "use server";
+  const { supabase } = await requireOwner();
+  const id = String(formData.get("plan_id") ?? "").trim();
+  const { error } = await supabase.rpc("admin_set_recommended_plan", { p_plan_id: id || null });
+  if (error) redirect(withMessage("/plans", "error", error.message));
+  revalidatePath("/plans");
+  redirect(
+    withMessage(
+      "/plans",
+      "ok",
+      id ? "Recommended plan saved. The app now opens with it selected." : "No recommended plan: the first plan is selected.",
+    ),
+  );
+}
+
 async function saveFreeMode(formData: FormData) {
   "use server";
   const { supabase } = await requireOwner();
@@ -87,6 +104,13 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
   ]);
   const plans = (data ?? []) as Plan[];
   const freeMode = (mode as { free_mode?: boolean } | null)?.free_mode ?? false;
+  const recommended = plans.find((p) => p.recommended);
+  // Same rule as the app: lowest price per day among plans shown (3 or more).
+  const shown = plans.filter((p) => p.active && p.duration_days > 0);
+  const bestId =
+    shown.length > 2
+      ? [...shown].sort((a, b) => a.price_inr / a.duration_days - b.price_inr / b.duration_days)[0].id
+      : undefined;
 
   return (
     <>
@@ -142,6 +166,37 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
         </form>
       </Card>
 
+      <Card className="mb-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1 basis-80">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-semibold text-gray-900">Recommended plan</h2>
+              <span className="rounded-full bg-brand-500 px-2.5 py-0.5 text-xs font-bold text-ink-900">🔥 MOST POPULAR</span>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-gray-500">
+              This plan is already selected when people open the Premium page, and shows a “🔥 Most popular” badge. The plan
+              with the lowest price per day keeps its “★ Best value” badge. Changes show in the app right away (app 1.11.8
+              and newer).
+            </p>
+          </div>
+          <form action={saveRecommended} className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
+              Plan
+              <Select name="plan_id" defaultValue={recommended?.id ?? ""} className="w-56!">
+                <option value="">None (first plan is selected)</option>
+                {plans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.active ? "" : " (hidden)"}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <Button type="submit">Save</Button>
+          </form>
+        </div>
+      </Card>
+
       <Card className="overflow-hidden p-0!">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-5 py-3">
           <h2 className="font-semibold text-gray-900">Plans</h2>
@@ -168,7 +223,17 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
                   <span className="mb-1 block text-xs font-medium text-gray-600 lg:sr-only">Name</span>
                   <div className="flex items-center gap-2">
                     <Input name="name" defaultValue={p.name} required className="min-w-0 flex-1" />
-                    <span className="hidden shrink-0 font-mono text-[11px] text-gray-400 xl:inline">{p.code}</span>
+                    {p.recommended ? (
+                      <span className="shrink-0 rounded-full bg-brand-500 px-2 py-0.5 text-[11px] font-bold text-ink-900">
+                        🔥 Most popular
+                      </span>
+                    ) : p.id === bestId ? (
+                      <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-800">
+                        ★ Best value
+                      </span>
+                    ) : (
+                      <span className="hidden shrink-0 font-mono text-[11px] text-gray-400 xl:inline">{p.code}</span>
+                    )}
                   </div>
                 </label>
                 <label className="block">

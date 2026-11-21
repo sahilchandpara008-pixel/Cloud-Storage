@@ -42,9 +42,12 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
       setState(() {
         plans = list;
         error = null;
-        // Start with the first plan picked, so one tap continues.
+        // Start with the recommended plan (else the first) picked, so one
+        // tap continues.
         if (selected == null || !list.any((p) => p.id == selected)) {
-          selected = list.isEmpty ? null : list.first.id;
+          selected = list.isEmpty
+              ? null
+              : (list.where((p) => p.recommended).firstOrNull ?? list.first).id;
         }
       });
     } catch (e) {
@@ -195,7 +198,7 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
         _PlanCard(
           plan: p,
           badge: deals.badge(p),
-          bestValue: deals.isBest(p),
+          featured: p.recommended,
           selected: p.id == selected,
           onTap: () => setState(() => selected = p.id),
         ),
@@ -355,7 +358,9 @@ class PlanDeals {
 
   String? badge(Plan p) {
     final s = save(p);
-    if (isBest(p)) return s >= 5 ? 'BEST VALUE · SAVE $s%' : 'BEST VALUE';
+    final off = s >= 5 ? ' · SAVE $s%' : '';
+    if (p.recommended) return '🔥 MOST POPULAR$off';
+    if (isBest(p)) return '★ BEST VALUE$off';
     return s >= 5 ? 'SAVE $s%' : null;
   }
 }
@@ -403,13 +408,13 @@ class _Chip extends StatelessWidget {
 class _PlanCard extends StatelessWidget {
   final Plan plan;
   final String? badge;
-  final bool bestValue;
+  final bool featured;
   final bool selected;
   final VoidCallback onTap;
   const _PlanCard({
     required this.plan,
     required this.badge,
-    required this.bestValue,
+    required this.featured,
     required this.selected,
     required this.onTap,
   });
@@ -518,21 +523,21 @@ class _PlanCard extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                 decoration: BoxDecoration(
-                  color: bestValue
+                  color: featured
                       ? AppColors.primary
                       : const Color(0xFF13301F),
                   borderRadius: BorderRadius.circular(999),
-                  border: bestValue
+                  border: featured
                       ? null
                       : Border.all(color: const Color(0xFF1F6B3E)),
                 ),
                 child: Text(
-                  bestValue ? '★ $badge' : badge!,
+                  badge!,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.4,
-                    color: bestValue ? AppColors.ink : const Color(0xFF4ADE80),
+                    color: featured ? AppColors.ink : const Color(0xFF4ADE80),
                   ),
                 ),
               ),

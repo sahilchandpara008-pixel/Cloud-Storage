@@ -214,6 +214,9 @@ class Plan {
   final int priceInr;
   final List<String> perks;
 
+  /// Set in admin → Plans: pre-selected and shown as "Most popular".
+  final bool recommended;
+
   const Plan({
     required this.id,
     required this.code,
@@ -221,6 +224,7 @@ class Plan {
     required this.durationDays,
     required this.priceInr,
     this.perks = const [],
+    this.recommended = false,
   });
 
   String get durationLabel {
@@ -241,6 +245,7 @@ class Plan {
     durationDays: (j['duration_days'] as num).toInt(),
     priceInr: (j['price_inr'] as num).toInt(),
     perks: ((j['perks'] as List?) ?? []).map((e) => e.toString()).toList(),
+    recommended: j['recommended'] == true,
   );
 }
 
