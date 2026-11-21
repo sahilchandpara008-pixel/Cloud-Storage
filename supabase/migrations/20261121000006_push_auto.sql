@@ -47,8 +47,8 @@ insert into public.push_auto (kind, enabled, title, body, enabled_at) values
    'Renew to keep fast speed & 2 TB storage.', now()),
   ('come_back',        false, 'New videos are waiting',
    'See what''s new on Flixvault.', null),
-  ('new_videos',       true,  'New in {channel}',
-   '{title}. Tap to watch.', now())
+  ('new_videos',       false, 'New in {channel}',
+   '{title}. Tap to watch.', null)
 on conflict (kind) do nothing;
 
 -- Per channel: off / members / all (no row = the default from new_videos).
