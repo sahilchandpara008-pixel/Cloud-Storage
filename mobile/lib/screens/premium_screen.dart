@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../config.dart';
 import '../models.dart';
@@ -11,6 +12,7 @@ import '../widgets/common.dart';
 import '../widgets/gates.dart';
 import '../widgets/reload.dart';
 import 'payment_status_screen.dart';
+import 'login_screen.dart';
 import 'policy_screen.dart';
 import 'profile_screen.dart';
 
@@ -40,6 +42,10 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
       setState(() {
         plans = list;
         error = null;
+        // Start with the first plan picked, so one tap continues.
+        if (selected == null || !list.any((p) => p.id == selected)) {
+          selected = list.isEmpty ? null : list.first.id;
+        }
       });
     } catch (e) {
       if (mounted) setState(() => error = friendlyError(e));
@@ -120,6 +126,104 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
     );
   }
 
+  Widget _continueBar() {
+    final plan = plans!.where((p) => p.id == selected).firstOrNull;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: FilledButton(
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(54),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            textStyle: const TextStyle(
+              fontFamily: AppFonts.body,
+              fontSize: 16.5,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          onPressed: sending || plan == null ? null : _next,
+          child: Text(
+            sending
+                ? 'Opening UPI…'
+                : plan == null
+                ? 'Select a plan'
+                : 'Continue with ${plan.name} · ₹${plan.priceInr}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _plansSection() {
+    final list = plans!;
+    final deals = PlanDeals(list);
+    return [
+      const Text(
+        'Go Premium',
+        style: TextStyle(
+          fontFamily: AppFonts.display,
+          fontSize: 26,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.4,
+        ),
+      ),
+      const SizedBox(height: 4),
+      const Text(
+        'One-time UPI payment · No auto-renewal',
+        style: TextStyle(fontSize: 13.5, color: AppColors.muted),
+      ),
+      const SizedBox(height: 14),
+      const Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _Chip(icon: Icons.bolt_rounded, text: 'Fast upload & download'),
+          _Chip(icon: Icons.cloud_outlined, text: '2 TB storage'),
+        ],
+      ),
+      const SizedBox(height: 20),
+      for (final p in list)
+        _PlanCard(
+          plan: p,
+          badge: deals.badge(p),
+          bestValue: deals.isBest(p),
+          selected: p.id == selected,
+          onTap: () => setState(() => selected = p.id),
+        ),
+      const SizedBox(height: 2),
+      Center(
+        child: TextButton.icon(
+          style: TextButton.styleFrom(foregroundColor: AppColors.muted),
+          onPressed: () => emailSupport(subject: 'Question about plans'),
+          icon: const Icon(Icons.mail_outline_rounded, size: 18),
+          label: const Text.rich(
+            TextSpan(
+              text: 'Questions? ',
+              children: [
+                TextSpan(
+                  text: 'Email us',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -148,6 +252,12 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
           ),
         ],
       ),
+      bottomNavigationBar: ListenableBuilder(
+        listenable: app,
+        builder: (context, _) => plans == null || app.noPlans
+            ? const SizedBox.shrink()
+            : _continueBar(),
+      ),
       body: ListenableBuilder(
         listenable: app,
         builder: (context, _) {
@@ -158,13 +268,6 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
             return const Center(child: CircularProgressIndicator());
           }
           final s = app.status;
-          final perks = plans!.isNotEmpty && plans!.first.perks.isNotEmpty
-              ? plans!.first.perks
-              : const [
-                  'Ad-Free Experience',
-                  'Access 2 TB Cloud Storage',
-                  'Fast Upload & Download Speed',
-                ];
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -210,131 +313,7 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
                     }
                   },
                 ),
-              if (!app.noPlans) ...[
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF3A1A06), Color(0xFF16110D)],
-                    ),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: const Color(0x59FF7A1A)),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x26FF7A1A),
-                        blurRadius: 28,
-                        offset: Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.workspace_premium,
-                              size: 18,
-                              color: AppColors.ink,
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'Premium',
-                              style: TextStyle(
-                                color: AppColors.ink,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      for (final perk in perks)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 5),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 26,
-                                height: 26,
-                                decoration: const BoxDecoration(
-                                  color: Color(0x33FF7A1A),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.check_rounded,
-                                  color: AppColors.primary,
-                                  size: 17,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  perk,
-                                  style: const TextStyle(
-                                    fontSize: 15.5,
-                                    color: AppColors.text,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                RadioGroup<String>(
-                  groupValue: selected,
-                  onChanged: (v) => setState(() => selected = v),
-                  child: Column(
-                    children: [
-                      for (final p in plans!)
-                        _PlanCard(
-                          plan: p,
-                          selected: p.id == selected,
-                          onTap: () => setState(() => selected = p.id),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(54),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    textStyle: const TextStyle(
-                      fontFamily: AppFonts.body,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  onPressed: sending || selected == null ? null : _next,
-                  child: Text(
-                    sending
-                        ? 'Opening UPI…'
-                        : selected == null
-                        ? 'Select a plan'
-                        : 'Continue to payment',
-                  ),
-                ),
-              ],
+              if (!app.noPlans) ..._plansSection(),
             ],
           );
         },
@@ -343,12 +322,94 @@ class _PremiumScreenState extends State<PremiumScreen> with ContentReload {
   }
 }
 
+/// Per-day price, "Save %" against the shortest plan, and the best value.
+class PlanDeals {
+  final List<Plan> plans;
+  late final double _base;
+  late final String? _bestId;
+  PlanDeals(this.plans) {
+    final valid = plans.where((p) => p.durationDays > 0).toList();
+    if (valid.isEmpty) {
+      _base = 0;
+      _bestId = null;
+      return;
+    }
+    valid.sort((a, b) => a.durationDays.compareTo(b.durationDays));
+    _base = perDay(valid.first);
+    valid.sort((a, b) => perDay(a).compareTo(perDay(b)));
+    _bestId = valid.length > 2 ? valid.first.id : null;
+  }
+
+  static double perDay(Plan p) =>
+      p.durationDays > 0 ? p.priceInr / p.durationDays : double.infinity;
+
+  static String perDayLabel(Plan p) {
+    final d = perDay(p);
+    if (!d.isFinite) return '';
+    return d < 10 ? '₹${d.toStringAsFixed(1)}/day' : '₹${d.round()}/day';
+  }
+
+  int save(Plan p) => _base > 0 ? ((1 - perDay(p) / _base) * 100).round() : 0;
+
+  bool isBest(Plan p) => p.id == _bestId;
+
+  String? badge(Plan p) {
+    final s = save(p);
+    if (isBest(p)) return s >= 5 ? 'BEST VALUE · SAVE $s%' : 'BEST VALUE';
+    return s >= 5 ? 'SAVE $s%' : null;
+  }
+}
+
+/// Opens the user's email app to write to support.
+Future<void> emailSupport({String? subject, String? body}) async {
+  final q = <String>[
+    'subject=${Uri.encodeComponent(subject ?? '${Config.appName} support')}',
+    if (body != null) 'body=${Uri.encodeComponent(body)}',
+  ].join('&');
+  try {
+    await launchUrl(Uri(scheme: 'mailto', path: Config.supportEmail, query: q));
+  } catch (_) {}
+}
+
+class _Chip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _Chip({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: AppColors.primary),
+          const SizedBox(width: 5),
+          Text(
+            text,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PlanCard extends StatelessWidget {
   final Plan plan;
+  final String? badge;
+  final bool bestValue;
   final bool selected;
   final VoidCallback onTap;
   const _PlanCard({
     required this.plan,
+    required this.badge,
+    required this.bestValue,
     required this.selected,
     required this.onTap,
   });
@@ -356,70 +417,127 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0x1AFF7A1A) : AppColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
-              width: selected ? 1.6 : 1,
-            ),
-            boxShadow: selected
-                ? const [
-                    BoxShadow(
-                      color: Color(0x26FF7A1A),
-                      blurRadius: 16,
-                      offset: Offset(0, 6),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            children: [
-              Radio<String>(value: plan.id, activeColor: AppColors.primary),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.fromLTRB(14, 15, 16, 13),
+                decoration: BoxDecoration(
+                  color: selected ? const Color(0x1AFF7A1A) : AppColors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: selected ? AppColors.primary : AppColors.border,
+                    width: 1.6,
+                  ),
+                  boxShadow: selected
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x33FF7A1A),
+                            blurRadius: 20,
+                            offset: Offset(0, 6),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      plan.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: selected ? AppColors.primary : AppColors.muted,
+                          width: selected ? 7 : 2,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      plan.durationLabel,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: AppColors.muted,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            plan.name,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            plan.durationLabel,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.muted,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '₹${plan.priceInr}',
+                          style: TextStyle(
+                            fontFamily: AppFonts.display,
+                            fontSize: 21,
+                            fontWeight: FontWeight.w700,
+                            color: selected
+                                ? AppColors.primary
+                                : AppColors.text,
+                          ),
+                        ),
+                        Text(
+                          PlanDeals.perDayLabel(plan),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(right: 12),
+            ),
+          ),
+          if (badge != null)
+            Positioned(
+              top: -10,
+              left: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: bestValue
+                      ? AppColors.primary
+                      : const Color(0xFF13301F),
+                  borderRadius: BorderRadius.circular(999),
+                  border: bestValue
+                      ? null
+                      : Border.all(color: const Color(0xFF1F6B3E)),
+                ),
                 child: Text(
-                  '₹${plan.priceInr}',
+                  bestValue ? '★ $badge' : badge!,
                   style: TextStyle(
-                    fontFamily: AppFonts.display,
-                    fontSize: 21,
-                    fontWeight: FontWeight.w700,
-                    color: selected ? AppColors.primary : AppColors.text,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                    color: bestValue ? AppColors.ink : const Color(0xFF4ADE80),
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -559,191 +677,316 @@ class _FreeAccount extends StatelessWidget {
   }
 }
 
-/// Shown when "Continue to payment" is tapped, before the UPI app opens.
-/// Returns true when the user taps "OK, continue"; the payment then goes on
-/// exactly as before.
+/// The one popup before payment (after "Continue"): plan, price, what they
+/// get, who they pay, what to do if money is debited, and - for guests - a
+/// small "save your plan" log-in line. Returns true on "Pay securely"; the
+/// payment then goes on exactly as before.
 Future<bool> showPlanTerms(BuildContext context, Plan plan) async {
   void open(String key) => Navigator.of(context)
       .push(MaterialPageRoute(builder: (_) => PolicyScreen(policyKey: key)));
-  final points = [
-    if (app.isGuest)
-      'You are not logged in, so this plan is saved only on this phone. If '
-          'you uninstall the app, clear its data, reset or change your phone, '
-          'the plan will be lost. Log in from Profile to keep it on any phone.'
-    else
-      'Your plan is saved to your account. Log in with the same account on a '
-          'new phone to keep using it.',
-    'If money is debited from your bank but the plan is not activated, do '
-        'not pay again. Contact support within 24 hours of the payment with '
-        'your order number and UTR, and we will activate the plan or refund '
-        'the payment.',
-    'Read the Terms and the Refund Policy before paying. Plans are '
-        'non-refundable once activated, except as described in the Refund '
-        'Policy (for example, a double charge).',
-  ];
+  const muted = TextStyle(fontSize: 12.5, height: 1.5, color: AppColors.muted);
   final ok = await showDialog<bool>(
     context: context,
     builder: (context) => Dialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       clipBehavior: Clip.antiAlias,
       backgroundColor: AppColors.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(26),
         side: const BorderSide(color: AppColors.border),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 14, 8, 0),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Terms and Conditions',
-                    style: TextStyle(
-                      fontFamily: AppFonts.display,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Close',
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => Navigator.pop(context, false),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            margin: const EdgeInsets.fromLTRB(22, 6, 22, 0),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0x1AFF7A1A),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0x59FF7A1A)),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.workspace_premium_rounded,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '${plan.name} · ${plan.durationLabel}',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Text(
-                  '₹${plan.priceInr}',
-                  style: const TextStyle(
-                    fontFamily: AppFonts.display,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: ListenableBuilder(
+        listenable: app,
+        builder: (context, _) => SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
                 children: [
-                  for (var i = 0; i < points.length; i++)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            margin: const EdgeInsets.only(right: 12, top: 1),
-                            alignment: Alignment.center,
-                            decoration: const BoxDecoration(
-                              color: AppColors.surfaceHigh,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '${i + 1}',
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.workspace_premium_rounded,
+                      color: AppColors.ink,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          plan.name,
+                          style: const TextStyle(
+                            fontFamily: AppFonts.display,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          '${plan.durationLabel} of Premium · ${PlanDeals.perDayLabel(plan)}',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '₹${plan.priceInr}',
+                    style: const TextStyle(
+                      fontFamily: AppFonts.display,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Column(
+                  children: [
+                    _Tick('Fast upload & download speed'),
+                    _Tick('2 TB cloud storage'),
+                    _Tick('Starts instantly after payment'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F2A1A),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF1F6B3E)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.lock_rounded,
+                      size: 18,
+                      color: Color(0xFF4ADE80),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          text: "You'll pay ",
+                          children: [
+                            TextSpan(
+                              text: '₹${plan.priceInr} to ${Config.appName}',
                               style: const TextStyle(
-                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
                               ),
                             ),
+                            const TextSpan(
+                              text: ' securely in your UPI app (Google Pay, PhonePe, Paytm…).',
+                            ),
+                          ],
+                        ),
+                        style: const TextStyle(fontSize: 13.5, height: 1.45),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Money debited but plan not active? Don't pay again. Email us "
+                "with your order number and we'll activate it or refund within "
+                "24 hours. Plans aren't refundable once active, except as in "
+                'the Refund Policy.',
+                style: muted,
+              ),
+              if (app.isGuest) ...[
+                const SizedBox(height: 12),
+                Material(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.shield_outlined,
+                            color: AppColors.primary,
+                            size: 22,
                           ),
+                          SizedBox(width: 10),
                           Expanded(
-                            child: Text(
-                              points[i],
-                              style: const TextStyle(
-                                fontSize: 14.5,
-                                height: 1.5,
-                                color: Color(0xFFD4D4D8),
+                            child: Text.rich(
+                              TextSpan(
+                                text: 'Save your plan to your account\n',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: "As a guest it's saved only on this phone. ",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w400,
+                                      color: AppColors.muted,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: 'Log in',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 12.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  Wrap(
-                    spacing: 4,
-                    children: [
-                      TextButton(
-                        onPressed: () => open('terms'),
-                        child: const Text('Terms & Conditions'),
-                      ),
-                      TextButton(
-                        onPressed: () => open('refund'),
-                        child: const Text('Refund Policy'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
-            child: Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 52),
-                    ),
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 3,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 52),
-                    ),
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('OK, continue'),
                   ),
                 ),
               ],
-            ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 54,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text('Pay ₹${plan.priceInr} securely'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'One-time payment · No auto-renewal',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: AppColors.muted),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text(
+                    'By paying you accept the ',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.subtle),
+                  ),
+                  _MiniLink('Terms', () => open('terms')),
+                  const Text(
+                    ' & ',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.subtle),
+                  ),
+                  _MiniLink('Refund Policy', () => open('refund')),
+                ],
+              ),
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text(
+                    'Need help? ',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.subtle),
+                  ),
+                  _MiniLink(
+                    'Email us',
+                    () => emailSupport(subject: 'Question about ${plan.name}'),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     ),
   );
   return ok == true;
+}
+
+class _Tick extends StatelessWidget {
+  final String text;
+  const _Tick(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.check_circle_rounded,
+            size: 18,
+            color: Color(0xFF4ADE80),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniLink extends StatelessWidget {
+  final String text;
+  final VoidCallback onTap;
+  const _MiniLink(this.text, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
+        ),
+      ),
+    );
+  }
 }

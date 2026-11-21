@@ -8,6 +8,7 @@ import '../services/payments.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import 'premium_screen.dart' show emailSupport;
 
 /// Shows what the SERVER says about an order. Polls every 5 s for ~10 minutes,
 /// and re-checks whenever the app comes back to the foreground or a UPI answer
@@ -120,6 +121,19 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen>
     }
   }
 
+  void _getHelp() {
+    final o = order;
+    emailSupport(
+      subject: 'Payment help - order ${widget.order.reference}',
+      body:
+          'Order number: ${widget.order.reference}\n'
+          'Plan: ${o?.planName ?? widget.order.planName}\n'
+          'Amount: ${o?.amountLabel ?? '₹${widget.order.amount}'}\n'
+          'UTR / transaction ID (from your UPI app): \n\n'
+          'Please describe the problem:\n',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final o = order;
@@ -138,12 +152,17 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen>
       'cancelled' => (
         Icons.remove_circle_outline,
         AppColors.muted,
-        'Payment cancelled. You can try again.',
+        'Payment not completed. You can try again.',
       ),
       'revoked' => (
         Icons.block,
         AppColors.muted,
         'This payment was reversed after review. Contact support if you think this is wrong.',
+      ),
+      _ when o?.clientStatus == 'NO_RESPONSE' || status == 'initiated' => (
+        Icons.hourglass_top,
+        AppColors.warning,
+        'Payment not completed',
       ),
       _ => (
         Icons.hourglass_top,
@@ -152,6 +171,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen>
       ),
     };
     final open = o == null || o.isOpen;
+    final notDone =
+        open && (o?.clientStatus == 'NO_RESPONSE' || status == 'initiated');
+    final amount = o?.amountLabel ?? '₹${widget.order.amount}';
 
     return Scaffold(
       appBar: AppBar(
@@ -223,29 +245,52 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen>
             ),
           const SizedBox(height: 24),
           if (open) ...[
-            if (o?.clientStatus == 'NO_RESPONSE' || o?.status == 'initiated')
+            if (notDone)
               const Padding(
-                padding: EdgeInsets.only(bottom: 12),
+                padding: EdgeInsets.only(bottom: 16),
                 child: Text(
-                  "If you didn't complete the payment in your UPI app, tap Pay again. "
-                  'If money was taken, keep this order number; we will verify it.',
+                  "No money is taken if you didn't finish in your UPI app. "
+                  'You can try again now.',
                   textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.muted, height: 1.4),
                 ),
               ),
-            OutlinedButton(
+            SizedBox(
+              height: 54,
+              child: FilledButton(
+                onPressed: launching ? null : _payAgain,
+                child: Text(launching ? 'Opening…' : 'Try again · $amount'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: _getHelp,
+                icon: const Icon(Icons.mail_outline_rounded, size: 20),
+                label: const Text('Paid but plan not active? Get help'),
+              ),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: AppColors.muted),
               onPressed: checking ? null : _manualCheck,
               child: const Text('Check payment status'),
             ),
-            const SizedBox(height: 8),
-            FilledButton(
-              onPressed: launching ? null : _payAgain,
-              child: Text(launching ? 'Opening…' : 'Pay again'),
-            ),
-          ] else
+          ] else ...[
+            if (status != 'approved')
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: OutlinedButton.icon(
+                  onPressed: _getHelp,
+                  icon: const Icon(Icons.mail_outline_rounded, size: 20),
+                  label: const Text('Need help with this payment?'),
+                ),
+              ),
             FilledButton(
               onPressed: () => Navigator.pop(context, status == 'approved'),
               child: Text(status == 'approved' ? 'Done' : 'Back to plans'),
             ),
+          ],
         ],
       ),
     );
