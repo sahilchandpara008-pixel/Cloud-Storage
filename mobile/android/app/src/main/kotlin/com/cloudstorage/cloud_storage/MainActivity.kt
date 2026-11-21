@@ -27,6 +27,21 @@ import org.json.JSONObject
  */
 class MainActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
+    private var pendingNotify: MethodChannel.Result? = null
+
+    private fun notifyStatus(): String {
+        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val on = if (Build.VERSION.SDK_INT >= 24) nm.areNotificationsEnabled() else true
+        return if (on) "allowed" else "denied"
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_NOTIFY) {
+            pendingNotify?.success(notifyStatus())
+            pendingNotify = null
+        }
+    }
 
     private val store get() = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -55,6 +70,26 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+        // Notification permission: Android 13+ shows its Allow / Don't allow
+        // question; older versions allow notifications unless turned off.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NOTIFY_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "status" -> result.success(notifyStatus())
+                    "request" -> {
+                        if (Build.VERSION.SDK_INT >= 33 &&
+                            checkSelfPermission(POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            pendingNotify?.success(notifyStatus())
+                            pendingNotify = result
+                            requestPermissions(arrayOf(POST_NOTIFICATIONS), REQUEST_NOTIFY)
+                        } else {
+                            result.success(notifyStatus())
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         // Downloads (premium): Android's download manager saves the file to
         // Downloads/Flixvault and shows a progress notification.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, DOWNLOAD_CHANNEL)
@@ -185,6 +220,9 @@ class MainActivity : FlutterActivity() {
         private const val CHANNEL = "cloudstorage/upi"
         private const val SCREEN_CHANNEL = "cloudstorage/screen"
         private const val DOWNLOAD_CHANNEL = "cloudstorage/download"
+        private const val NOTIFY_CHANNEL = "cloudstorage/notify"
+        private const val POST_NOTIFICATIONS = "android.permission.POST_NOTIFICATIONS"
+        private const val REQUEST_NOTIFY = 7302
         private const val PREFS = "upi_payments"
         private const val KEY_LAUNCHED = "launched_order"
         private const val KEY_ANSWERS = "answers"

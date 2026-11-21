@@ -1009,6 +1009,32 @@ set role anon;
 select t.fails($$select public.record_ad_ids('99999999-0000-0000-0000-000000000001', 'x', null)$$, 'not callable without a session');
 reset role;
 set role authenticated;
+select t.act_as('ads_user');
+select public.record_notif_status('99999999-0000-0000-0000-000000000001', 'allowed');
+reset role;
+select t.ok((select notif_status = 'allowed' from public.installs where install_id = '99999999-0000-0000-0000-000000000001'),
+            'app stores the notification answer');
+set role authenticated;
+select t.act_as('ads_user');
+select public.record_notif_status('99999999-0000-0000-0000-000000000001', 'maybe');
+select public.record_notif_status('99999999-0000-0000-0000-000000000001', 'denied');
+reset role;
+select t.ok((select notif_status = 'denied' from public.installs where install_id = '99999999-0000-0000-0000-000000000001'),
+            'notification answer updates; bad values ignored');
+set role authenticated;
+select t.act_as('organic_user');
+select t.fails($$select public.admin_notif_stats()$$, 'app users cannot read notification stats');
+select t.act_as('owner');
+select t.ok((select (s->'all'->>'allowed')::int + (s->'all'->>'denied')::int + (s->'all'->>'unknown')::int
+                    = (s->'all'->>'installs')::int
+                    and (s->'ads'->>'installs')::int + (s->'organic'->>'installs')::int = (s->'all'->>'installs')::int
+               from (select public.admin_notif_stats() s) x),
+            'notification stats add up (allowed + denied + unknown; ads + organic)');
+reset role;
+set role anon;
+select t.fails($$select public.record_notif_status('99999999-0000-0000-0000-000000000001', 'allowed')$$, 'notification answer needs a session');
+reset role;
+set role authenticated;
 select t.act_as('owner');
 select t.ok((public.admin_payment_funnel()->'groups'->'all'->>'installs')::int =
             (select count(*) from public.installs i where i.first_user_id is null or not public.is_admin_user(i.first_user_id)),

@@ -14,6 +14,7 @@ import '../models.dart';
 import '../services/backend.dart';
 import '../services/blocks.dart';
 import '../services/meta_ids.dart';
+import '../services/notify_permission.dart';
 import '../services/payments.dart';
 import '../services/play_billing.dart';
 
@@ -85,6 +86,7 @@ class AppState extends ChangeNotifier {
       await _recordInstall();
       // Not awaited: never delays the app's start.
       unawaited(MetaIds.sync(_prefs, installId));
+      unawaited(NotifyPermission.sync(_prefs, installId));
       await refreshStatus();
       Backend.logEvent(installId, 'app_open');
 
@@ -188,6 +190,10 @@ class AppState extends ChangeNotifier {
   }
 
   void bumpContent() => contentVersion.value++;
+
+  /// Android's notification question, once (called right after consent).
+  Future<void> askNotificationsOnce() =>
+      NotifyPermission.askOnce(_prefs, installId);
 
   Future<void> acceptConsent() async {
     await _prefs.setString('consent', Config.policyVersion);

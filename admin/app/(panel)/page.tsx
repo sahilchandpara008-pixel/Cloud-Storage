@@ -94,6 +94,84 @@ function DailyChart({ days, showMoney }: { days: Day[]; showMoney: boolean }) {
   );
 }
 
+type Rates = Record<string, number>;
+
+// Success / failure split for All, Ads and Organic (payments or notifications).
+function RateCard({
+  title,
+  href,
+  groups,
+  base,
+  good,
+  bad,
+  rest,
+  labels,
+  baseLabel,
+}: {
+  title: string;
+  href?: string;
+  groups: Record<string, Rates>;
+  base: string;
+  good: string;
+  bad: string;
+  rest: string;
+  labels: [string, string, string];
+  baseLabel: string;
+}) {
+  const share = (v: number, t: number) => (t > 0 ? Math.round((v / t) * 100) : 0);
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+        {href && (
+          <Link href={href} className="text-xs font-medium text-brand-700 hover:underline">
+            Details →
+          </Link>
+        )}
+      </div>
+      <div className="space-y-3">
+        {(["all", "ads", "organic"] as const).map((k) => {
+          const g = groups[k] ?? {};
+          const t = n(g[base]);
+          const ok = n(g[good]);
+          const no = n(g[bad]);
+          const wait = n(g[rest]);
+          return (
+            <div key={k}>
+              <div className="mb-1 flex items-baseline justify-between text-xs">
+                <span className="font-medium text-gray-700">
+                  {k === "all" ? "All" : k === "ads" ? "Ads" : "Organic"}{" "}
+                  <span className="font-normal text-gray-400">
+                    · {fmt(t)} {baseLabel}
+                  </span>
+                </span>
+                <span className="tabular-nums">
+                  <b className="text-green-700">{share(ok, t)}%</b>{" "}
+                  <span className="text-gray-400">{labels[0].toLowerCase()}</span>
+                  {" · "}
+                  <b className="text-red-700">{share(no, t)}%</b>{" "}
+                  <span className="text-gray-400">{labels[1].toLowerCase()}</span>
+                </span>
+              </div>
+              <div
+                className="flex h-2 overflow-hidden rounded-full bg-gray-100"
+                role="img"
+                aria-label={`${labels[0]} ${share(ok, t)}%, ${labels[1]} ${share(no, t)}%, ${labels[2]} ${share(wait, t)}%`}
+              >
+                <div className="h-full bg-green-600" style={{ width: `${share(ok, t)}%` }} />
+                <div className="h-full bg-red-500" style={{ width: `${share(no, t)}%` }} />
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400 tabular-nums">
+                {labels[0]} {fmt(ok)} · {labels[1]} {fmt(no)} · {labels[2]} {fmt(wait)}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default async function Dashboard({
   searchParams,
 }: {
@@ -109,11 +187,15 @@ export default async function Dashboard({
   if (dayStart(from)) range.p_from = dayStart(from)!;
   if (dayEnd(to)) range.p_to = dayEnd(to)!;
 
-  const [{ data }, { data: an }, { data: rows }] = await Promise.all([
+  const [{ data }, { data: an }, { data: rows }, { data: fun }, { data: nt }] = await Promise.all([
     supabase.rpc("admin_dashboard"),
     supabase.rpc("admin_analytics", { p_from: dayStart(from), p_to: dayEnd(to) }),
     owner ? supabase.rpc("attribution_report", range) : Promise.resolve({ data: [] }),
+    owner ? supabase.rpc("admin_payment_funnel", range) : Promise.resolve({ data: null }),
+    owner ? supabase.rpc("admin_notif_stats", range) : Promise.resolve({ data: null }),
   ]);
+  const payGroups = ((fun as { groups?: Record<string, Rates> } | null)?.groups ?? {}) as Record<string, Rates>;
+  const notifGroups = (nt ?? {}) as Record<string, Rates>;
   const s = (data ?? {}) as Stats;
   const a = (an ?? {}) as Analytics;
   const report = (rows ?? []) as ReportRow[];
@@ -240,6 +322,32 @@ export default async function Dashboard({
           <Stat label="Video views" value={fmt(a.video_views)} icon="◉" tone="gray" hint={`${fmt(a.preview_views)} preview views`} />
         </div>
       </div>
+
+      {owner && (
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <RateCard
+            title="Payment success"
+            href={`/payments?view=funnel${rangeQuery}`}
+            groups={payGroups}
+            base="tried"
+            good="paid"
+            bad="not_paid"
+            rest="waiting"
+            labels={["Paid", "Didn't pay", "Waiting"]}
+            baseLabel="tried to pay"
+          />
+          <RateCard
+            title="Notifications"
+            groups={notifGroups}
+            base="installs"
+            good="allowed"
+            bad="denied"
+            rest="unknown"
+            labels={["Allowed", "Not allowed", "Not asked yet"]}
+            baseLabel="installs"
+          />
+        </div>
+      )}
 
       <section className="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">

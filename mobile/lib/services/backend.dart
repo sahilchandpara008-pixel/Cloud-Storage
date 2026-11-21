@@ -59,6 +59,13 @@ class Backend {
     );
   }
 
+  static Future<void> recordNotifStatus(String installId, String status) async {
+    await sb.rpc(
+      'record_notif_status',
+      params: {'p_install_id': installId, 'p_status': status},
+    );
+  }
+
   static Future<void> attributeUser(String installId) async {
     await sb.rpc('attribute_user', params: {'p_install_id': installId});
   }

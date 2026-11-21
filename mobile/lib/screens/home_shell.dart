@@ -89,12 +89,17 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   }
 
   Future<void> _maybeAskConsent() async {
-    if (app.consentGiven || !mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const ConsentDialog(),
-    );
+    if (!mounted) return;
+    if (!app.consentGiven) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const ConsentDialog(),
+      );
+    }
+    // Right after "Agree" (or once for people who agreed in an older
+    // version): Android's Allow / Don't allow notifications question.
+    if (mounted && app.consentGiven) await app.askNotificationsOnce();
   }
 
   @override
