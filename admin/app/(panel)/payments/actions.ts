@@ -48,8 +48,8 @@ export async function saveSettings(back: string, formData: FormData) {
     .eq("id", 1);
   if (error) redirect(withMessage(back, "error", error.message));
   if (count === 0) redirect(withMessage(back, "error", "You don't have permission to change this."));
-  revalidatePath("/payments");
-  redirect(withMessage(back, "ok", "Payment settings saved."));
+  revalidatePath("/plans");
+  redirect(withMessage(back, "ok", "UPI settings saved."));
 }
 
 export async function savePlay(back: string, formData: FormData) {

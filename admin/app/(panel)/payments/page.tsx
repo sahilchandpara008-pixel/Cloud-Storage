@@ -18,7 +18,7 @@ import {
 import { requireOwner } from "@/lib/auth";
 import { dayEnd, dayStart, isDate } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
-import { markPaid, revokePayment, savePlay, saveSettings } from "./actions";
+import { markPaid, revokePayment, savePlay } from "./actions";
 
 type Order = {
   id: string;
@@ -163,9 +163,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   const back = query(sp, {});
   const { supabase } = await requireOwner();
 
-  const [{ data: planRows }, { data: settings }, { data: play }, { data: playSummary }] = await Promise.all([
+  const [{ data: planRows }, { data: play }, { data: playSummary }] = await Promise.all([
     supabase.from("plans").select("id, name, price_inr").order("position"),
-    supabase.from("payment_settings").select("upi_id, payee_name, enabled").eq("id", 1).maybeSingle(),
     supabase.from("play_settings").select("package_name, enabled, last_run_at, last_error").eq("id", 1).maybeSingle(),
     supabase.rpc("admin_play_report_summary"),
   ]);
@@ -796,28 +795,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       {tabs}
       {body}
 
-      <div className="mt-8 grid items-start gap-5 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-3 font-semibold">UPI settings</h2>
-          <form action={saveSettings.bind(null, back)} className="grid gap-3">
-            <label className="text-sm">
-              UPI ID
-              <Input name="upi_id" defaultValue={settings?.upi_id ?? ""} required />
-            </label>
-            <label className="text-sm">
-              Payee name (shown in the UPI app)
-              <Input name="payee_name" defaultValue={settings?.payee_name ?? ""} required />
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="enabled" defaultChecked={settings?.enabled ?? true} /> Accept payments in the
-              app
-            </label>
-            <div>
-              <Button type="submit">Save</Button>
-            </div>
-          </form>
-        </Card>
-
+      <div className="mt-8 max-w-2xl">
         <Card>
           <div className="mb-2 flex items-center justify-between gap-2">
             <h2 className="font-semibold">Google Play reporting (Play Store version only)</h2>

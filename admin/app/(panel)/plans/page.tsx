@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Button, Card, Field, Flash, Input, PageHeader, Textarea } from "@/components/ui";
 import { requireOwner } from "@/lib/auth";
 import { withMessage } from "@/lib/format";
+import { saveSettings } from "../payments/actions";
 
 type Plan = {
   id: string;
@@ -79,9 +80,10 @@ async function saveFreeMode(formData: FormData) {
 export default async function PlansPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { ok, error } = await searchParams;
   const { supabase } = await requireOwner();
-  const [{ data }, { data: mode }] = await Promise.all([
+  const [{ data }, { data: mode }, { data: upi }] = await Promise.all([
     supabase.from("plans").select("*").order("position"),
     supabase.from("app_mode").select("free_mode").eq("id", 1).maybeSingle(),
+    supabase.from("payment_settings").select("upi_id, payee_name, enabled").eq("id", 1).maybeSingle(),
   ]);
   const plans = (data ?? []) as Plan[];
   const freeMode = (mode as { free_mode?: boolean } | null)?.free_mode ?? false;
@@ -116,6 +118,27 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
             Free mode on
           </label>
           <Button type="submit">Save</Button>
+        </form>
+      </Card>
+
+      <Card className="mb-5">
+        <h2 className="mb-1 font-semibold text-gray-900">UPI settings</h2>
+        <p className="mb-3 text-xs text-gray-500">Where plan payments in the app are paid to.</p>
+        <form action={saveSettings.bind(null, "/plans")} className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">
+            UPI ID
+            <Input name="upi_id" defaultValue={upi?.upi_id ?? ""} required />
+          </label>
+          <label className="text-sm">
+            Payee name (shown in the UPI app)
+            <Input name="payee_name" defaultValue={upi?.payee_name ?? ""} required />
+          </label>
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" name="enabled" defaultChecked={upi?.enabled ?? true} /> Accept payments in the app
+          </label>
+          <div>
+            <Button type="submit">Save</Button>
+          </div>
         </form>
       </Card>
 
