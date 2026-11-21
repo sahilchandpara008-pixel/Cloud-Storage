@@ -1,5 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Advertising ID: lets Meta count installs from its ads. Not read when the
+         user has turned off ad personalisation. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
     <application
         android:label="Flixvault"
         android:name="${applicationName}"
@@ -33,6 +36,8 @@
                 <data android:scheme="com.cloudstorage.app" android:host="login-callback" />
             </intent-filter>
         </activity>
+        <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id" />
+        <meta-data android:name="com.facebook.sdk.ClientToken" android:value="@string/facebook_client_token" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

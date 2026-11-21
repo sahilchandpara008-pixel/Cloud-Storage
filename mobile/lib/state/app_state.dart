@@ -13,6 +13,7 @@ import '../config.dart';
 import '../models.dart';
 import '../services/backend.dart';
 import '../services/blocks.dart';
+import '../services/meta_ids.dart';
 import '../services/payments.dart';
 import '../services/play_billing.dart';
 
@@ -82,6 +83,8 @@ class AppState extends ChangeNotifier {
         await sb.auth.signInAnonymously();
       }
       await _recordInstall();
+      // Not awaited: never delays the app's start.
+      unawaited(MetaIds.sync(_prefs, installId));
       await refreshStatus();
       Backend.logEvent(installId, 'app_open');
 

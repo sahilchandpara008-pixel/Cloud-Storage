@@ -97,6 +97,7 @@ type SP = {
 
 const views = [
   { value: "orders", label: "Orders" },
+  { value: "funnel", label: "Payment success" },
   { value: "plans", label: "Plan summary" },
   { value: "buyers", label: "Customers & repeat buyers" },
 ];
@@ -202,7 +203,117 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
   let body: React.ReactNode;
   let loadError: string | undefined;
 
-  if (view === "plans") {
+  if (view === "funnel") {
+    const { data, error } = await supabase.rpc("admin_payment_funnel", {
+      p_from: dayStart(sp.from),
+      p_to: dayEnd(sp.to),
+    });
+    loadError = error?.message;
+    type G = { installs: number; tried: number; paid: number; not_paid: number; waiting: number };
+    const f = (data ?? {}) as {
+      groups?: Record<string, G>;
+      orders?: Record<string, number>;
+      reasons?: { reason: string; n: number }[];
+    };
+    const pc = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)}%` : "—");
+    const rows: [string, G | undefined][] = [
+      ["Everyone", f.groups?.all],
+      ["From Meta ads", f.groups?.ads],
+      ["Organic", f.groups?.organic],
+    ];
+    const o = f.orders ?? {};
+    body = (
+      <>
+        <DatePresets
+          className="mb-3"
+          from={sp.from}
+          to={sp.to}
+          href={(fr, t) => query({}, { view: "funnel", from: fr, to: t })}
+        />
+        <form className="mb-4 flex flex-wrap items-end gap-3">
+          <input type="hidden" name="view" value="funnel" />
+          {dateInputs}
+          <Button type="submit">Apply</Button>
+        </form>
+        <p className="mb-3 text-sm text-gray-500">
+          People who installed the app in this period, and what happened when they tried to buy a plan (at any time
+          after installing). Your own test payments are left out.
+        </p>
+        <div className="space-y-4">
+          {rows.map(([label, g]) => {
+            const x = g ?? { installs: 0, tried: 0, paid: 0, not_paid: 0, waiting: 0 };
+            return (
+              <Card key={label}>
+                <h3 className="mb-3 font-semibold">{label}</h3>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                  {[
+                    ["Downloaded", String(x.installs), ""],
+                    ["Tried to pay", String(x.tried), `${pc(x.tried, x.installs)} of downloads`],
+                    ["Paid", String(x.paid), `${pc(x.paid, x.tried)} success`],
+                    ["Did not pay", String(x.not_paid), `${pc(x.not_paid, x.tried)} unsuccessful`],
+                    ["Still waiting", String(x.waiting), "payment not confirmed yet"],
+                  ].map(([k, v, h]) => (
+                    <div key={k} className="rounded-xl border border-gray-200 px-3 py-2">
+                      <p className="text-xs text-gray-500">{k}</p>
+                      <p className="text-2xl font-bold tabular-nums">{v}</p>
+                      {h && <p className="text-xs text-gray-500">{h}</p>}
+                    </div>
+                  ))}
+                </div>
+                {x.tried > 0 && (
+                  <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
+                    <div className="h-full bg-green-600" style={{ width: `${(x.paid / x.tried) * 100}%` }} />
+                    <div className="h-full bg-red-600" style={{ width: `${(x.not_paid / x.tried) * 100}%` }} />
+                    <div className="h-full bg-amber-500" style={{ width: `${(x.waiting / x.tried) * 100}%` }} />
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+          <Card>
+            <h3 className="mb-3 font-semibold">Payment attempts in this period</h3>
+            <p className="mb-3 text-sm text-gray-500">
+              Every order started in this period (one person can try more than once).
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {[
+                ["Started", o.total ?? 0, ""],
+                ["Successful", o.approved ?? 0, pc(o.approved ?? 0, o.total ?? 0)],
+                ["Failed", o.failed ?? 0, pc(o.failed ?? 0, o.total ?? 0)],
+                ["Not completed", o.cancelled ?? 0, pc(o.cancelled ?? 0, o.total ?? 0)],
+                ["Waiting", o.pending ?? 0, pc(o.pending ?? 0, o.total ?? 0)],
+              ].map(([k, v, h]) => (
+                <div key={String(k)} className="rounded-xl border border-gray-200 px-3 py-2">
+                  <p className="text-xs text-gray-500">{k}</p>
+                  <p className="text-2xl font-bold tabular-nums">{v}</p>
+                  {h && <p className="text-xs text-gray-500">{h}</p>}
+                </div>
+              ))}
+            </div>
+            {(f.reasons?.length ?? 0) > 0 && (
+              <>
+                <h4 className="mb-2 mt-4 text-sm font-semibold">Why payments did not go through</h4>
+                <ul className="space-y-1 text-sm">
+                  {f.reasons!.map((x) => (
+                    <li key={x.reason} className="flex justify-between gap-3">
+                      <span className="text-gray-600">{x.reason}</span>
+                      <b className="tabular-nums">{x.n}</b>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <Link
+              href={query({}, { view: "orders", status: "cancelled", from: sp.from, to: sp.to })}
+              className="mt-3 inline-block text-sm text-brand-700 underline"
+            >
+              See the orders that did not go through
+            </Link>
+          </Card>
+        </div>
+      </>
+    );
+  } else if (view === "plans") {
     const { data, error } = await supabase.rpc("admin_plan_sales", {
       p_from: dayStart(sp.from),
       p_to: dayEnd(sp.to),

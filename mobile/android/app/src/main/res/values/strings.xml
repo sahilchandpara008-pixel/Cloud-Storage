@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Meta (Facebook) SDK: counts installs from Meta ads. Neither value is a
+         secret: both ship inside every app that uses the SDK. -->
+    <string name="facebook_app_id">1790101855436439</string>
+    <string name="facebook_client_token">3b707f7b96e329e0836dd72e4d100329</string>
+</resources>

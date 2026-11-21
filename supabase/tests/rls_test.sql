@@ -977,6 +977,52 @@ select t.ok((select public.meta_event_payload(e, s)->'user_data'->'em'->>0
             = encode(sha256(convert_to('buyer@example.com', 'UTF8')), 'hex'),
             'email is sent only as a lower-cased SHA-256 hash');
 select t.ok(public.meta_dispatch() = 0, 'sender is a no-op without pg_net (local tests)');
+-- App 1.11.4+: Meta SDK install ID + advertising ID on every event.
+set role authenticated;
+select t.act_as('ads_user');
+select public.record_ad_ids('99999999-0000-0000-0000-000000000001', 'XZabc-123', '38400000-8CF0-11BD-B23E-10B96E40000D');
+reset role;
+select t.ok((select fb_anon_id = 'XZabc-123' and ad_id = '38400000-8cf0-11bd-b23e-10b96e40000d'
+               from public.installs where install_id = '99999999-0000-0000-0000-000000000001'),
+            'app stores the SDK install ID and advertising ID');
+select t.ok((select p->'user_data'->>'anon_id' = 'XZabc-123'
+                    and p->'user_data'->>'madid' = '38400000-8cf0-11bd-b23e-10b96e40000d'
+                    and (p->'app_data'->>'advertiser_tracking_enabled')::int = 1
+               from (select public.meta_event_payload(e, s) p
+                       from public.meta_events e, public.meta_settings s
+                      where e.event_id = 'mobile-install-99999999-0000-0000-0000-000000000001') x),
+            'events carry the SDK install ID and the advertising ID');
+set role authenticated;
+select t.act_as('ads_user');
+select public.record_ad_ids('99999999-0000-0000-0000-000000000001', 'XZabc-123', null);
+select public.record_ad_ids('99999999-0000-0000-0000-000000000001', 'bad id!', 'not-an-id');
+reset role;
+select t.ok((select fb_anon_id = 'XZabc-123' and ad_id is null
+               from public.installs where install_id = '99999999-0000-0000-0000-000000000001'),
+            'ad personalisation off: advertising ID removed; bad values ignored');
+select t.ok((select not (p->'user_data' ? 'madid') and (p->'app_data'->>'advertiser_tracking_enabled')::int = 0
+               from (select public.meta_event_payload(e, s) p
+                       from public.meta_events e, public.meta_settings s
+                      where e.event_id = 'mobile-install-99999999-0000-0000-0000-000000000001') x),
+            'no advertising ID is sent to Meta when the user opted out');
+set role anon;
+select t.fails($$select public.record_ad_ids('99999999-0000-0000-0000-000000000001', 'x', null)$$, 'not callable without a session');
+reset role;
+set role authenticated;
+select t.act_as('owner');
+select t.ok((public.admin_payment_funnel()->'groups'->'all'->>'installs')::int =
+            (select count(*) from public.installs i where i.first_user_id is null or not public.is_admin_user(i.first_user_id)),
+            'payment funnel counts every install');
+select t.ok((select (g->>'paid')::int <= (g->>'tried')::int and (g->>'tried')::int <= (g->>'installs')::int
+                    and (g->>'paid')::int + (g->>'not_paid')::int + (g->>'waiting')::int = (g->>'tried')::int
+               from (select public.admin_payment_funnel()->'groups'->'all' g) x),
+            'payment funnel: paid + not paid + waiting = tried');
+select t.ok((public.admin_payment_funnel()->'orders'->>'total')::int =
+            (select count(*) from public.payment_orders o where not public.is_admin_user(o.user_id)),
+            'payment funnel counts every order (admins left out)');
+select t.act_as('content_admin');
+select t.fails($$select public.admin_payment_funnel()$$, 'content admins cannot see the payment funnel');
+reset role;
 set role authenticated;
 select t.act_as('owner');
 select t.ok((select count(*) from public.admin_meta_events()) >= 5, 'owner sees the event log');

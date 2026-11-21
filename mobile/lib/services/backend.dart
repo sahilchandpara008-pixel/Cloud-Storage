@@ -47,6 +47,18 @@ class Backend {
     return res as String?;
   }
 
+  /// Meta ad measurement IDs for this install (see MetaIds).
+  static Future<void> recordAdIds(
+    String installId, {
+    String? anonId,
+    String? adId,
+  }) async {
+    await sb.rpc(
+      'record_ad_ids',
+      params: {'p_install_id': installId, 'p_fb_anon_id': anonId, 'p_ad_id': adId},
+    );
+  }
+
   static Future<void> attributeUser(String installId) async {
     await sb.rpc('attribute_user', params: {'p_install_id': installId});
   }
