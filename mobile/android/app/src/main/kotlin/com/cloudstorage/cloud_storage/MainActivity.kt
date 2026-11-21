@@ -28,6 +28,66 @@ import org.json.JSONObject
 class MainActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
     private var pendingNotify: MethodChannel.Result? = null
+    private var notifyChannel: MethodChannel? = null
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val d = intent.getStringExtra(EXTRA_PUSH) ?: return
+        intent.removeExtra(EXTRA_PUSH)
+        notifyChannel?.invokeMethod("tapped", d)
+    }
+
+    private fun showPush(title: String, body: String, image: String?, data: String) {
+        if (title.isEmpty()) return
+        Thread {
+            // Optional picture (https, up to ~1.5 MB); the text shows without it.
+            val picture = try {
+                if (image != null && image.startsWith("https://")) {
+                    val c = java.net.URL(image).openConnection() as java.net.HttpURLConnection
+                    c.connectTimeout = 5000
+                    c.readTimeout = 5000
+                    c.inputStream.use { input ->
+                        val bytes = input.readBytes()
+                        if (bytes.size <= 1_600_000) android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) else null
+                    }
+                } else null
+            } catch (e: Exception) {
+                null
+            }
+            val open = Intent(this, MainActivity::class.java)
+                .putExtra(EXTRA_PUSH, data)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            val id = (System.currentTimeMillis() and 0x7fffffff).toInt()
+            val tap = android.app.PendingIntent.getActivity(
+                this, id, open,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE,
+            )
+            @Suppress("DEPRECATION")
+            val b = if (Build.VERSION.SDK_INT >= 26) {
+                android.app.Notification.Builder(this, "flixvault_updates")
+            } else {
+                android.app.Notification.Builder(this).setPriority(android.app.Notification.PRIORITY_HIGH)
+            }
+            b.setSmallIcon(R.drawable.ic_stat_notify)
+                .setColor(0xFFFF7A1A.toInt())
+                .setContentTitle(title)
+                .setAutoCancel(true)
+                .setContentIntent(tap)
+            if (body.isNotEmpty()) b.setContentText(body)
+            if (picture != null) {
+                b.setLargeIcon(picture)
+                b.setStyle(android.app.Notification.BigPictureStyle().bigPicture(picture).setSummaryText(body))
+            } else if (body.isNotEmpty()) {
+                b.setStyle(android.app.Notification.BigTextStyle().bigText(body))
+            }
+            try {
+                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+                nm.notify(id, b.build())
+            } catch (e: Exception) {
+                // notifications turned off for the app
+            }
+        }.start()
+    }
 
     private fun notifyStatus(): String {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
@@ -88,10 +148,27 @@ class MainActivity : FlutterActivity() {
         }
         // Notification permission: Android 13+ shows its Allow / Don't allow
         // question; older versions allow notifications unless turned off.
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NOTIFY_CHANNEL)
-            .setMethodCallHandler { call, result ->
+        notifyChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NOTIFY_CHANNEL)
+        notifyChannel!!.setMethodCallHandler { call, result ->
                 when (call.method) {
                     "status" -> result.success(notifyStatus())
+                    // A push that arrives while the app is open: Android shows
+                    // nothing by itself, so show it in the notification bar.
+                    "show" -> {
+                        showPush(
+                            call.argument<String>("title") ?: "",
+                            call.argument<String>("body") ?: "",
+                            call.argument<String>("image"),
+                            call.argument<String>("data") ?: "{}",
+                        )
+                        result.success(true)
+                    }
+                    // Tap on such a notification that (re)started the app.
+                    "initialTap" -> {
+                        val d = intent?.getStringExtra(EXTRA_PUSH)
+                        intent?.removeExtra(EXTRA_PUSH)
+                        result.success(d)
+                    }
                     "request" -> {
                         if (Build.VERSION.SDK_INT >= 33 &&
                             checkSelfPermission(POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -165,7 +242,7 @@ class MainActivity : FlutterActivity() {
                 @Suppress("DEPRECATION")
                 packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             emptyList()
         }
         // Persist the order id BEFORE leaving the app.
@@ -213,7 +290,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun answers(): JSONObject =
-        try { JSONObject(store.getString(KEY_ANSWERS, "{}") ?: "{}") } catch (_: Exception) { JSONObject() }
+        try { JSONObject(store.getString(KEY_ANSWERS, "{}") ?: "{}") } catch (e: Exception) { JSONObject() }
 
     @Synchronized
     private fun saveAnswer(orderId: String, raw: String) {
@@ -239,6 +316,7 @@ class MainActivity : FlutterActivity() {
         private const val NOTIFY_CHANNEL = "cloudstorage/notify"
         private const val POST_NOTIFICATIONS = "android.permission.POST_NOTIFICATIONS"
         private const val REQUEST_NOTIFY = 7302
+        private const val EXTRA_PUSH = "flixvault_push"
         private const val PREFS = "upi_payments"
         private const val KEY_LAUNCHED = "launched_order"
         private const val KEY_ANSWERS = "answers"

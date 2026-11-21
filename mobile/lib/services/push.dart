@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io' show Platform;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -23,13 +25,14 @@ import 'backend.dart';
 ///   after the 18+ consent); nothing here asks.
 /// * A tapped message opens what it points to (a video, a channel, the
 ///   Premium page or a link) and is reported once for the admin's "Tapped".
-/// * While the app is open, Android shows nothing, so a small bar with an
-///   "Open" button is shown at the bottom instead.
+/// * While the app is open Android shows nothing by itself, so the app puts
+///   the message in the notification bar (with its picture) the same way.
 /// Never blocks or breaks the app.
 class Push {
   static final navigatorKey = GlobalKey<NavigatorState>();
   static final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
+  static const _native = MethodChannel('cloudstorage/notify');
   static bool _ready = false;
   static bool _listening = false;
   static String? _installId;
@@ -62,8 +65,12 @@ class Push {
         // server's FCM HTTP v1 "token" target expects.
         // ignore: deprecated_member_use
         m.onTokenRefresh.listen((t) => _send(prefs, installId, t));
-        FirebaseMessaging.onMessageOpenedApp.listen(_open);
+        FirebaseMessaging.onMessageOpenedApp.listen((m) => _openData(m.data));
         FirebaseMessaging.onMessage.listen(_foreground);
+        // Taps on notifications the app itself showed while it was open.
+        _native.setMethodCallHandler((call) async {
+          if (call.method == 'tapped') _openJson(call.arguments as String?);
+        });
       }
       // ignore: deprecated_member_use
       final token = await m.getToken();
@@ -91,14 +98,28 @@ class Push {
     if (!await _init()) return;
     try {
       final msg = await FirebaseMessaging.instance.getInitialMessage();
-      if (msg != null) _open(msg);
+      if (msg != null) {
+        _openData(msg.data);
+      } else {
+        _openJson(await _native.invokeMethod<String>('initialTap'));
+      }
     } catch (_) {}
   }
 
-  static void _foreground(RemoteMessage msg) {
+  static Future<void> _foreground(RemoteMessage msg) async {
     final n = msg.notification;
     final title = n?.title ?? '';
     if (title.isEmpty) return;
+    try {
+      await _native.invokeMethod('show', {
+        'title': title,
+        'body': n?.body ?? '',
+        'image': n?.android?.imageUrl,
+        'data': jsonEncode(msg.data),
+      });
+      return;
+    } catch (_) {}
+    // Fallback: a bar at the bottom of the app.
     messengerKey.currentState?.showSnackBar(
       SnackBar(
         content: Text(
@@ -108,17 +129,27 @@ class Push {
         ),
         duration: const Duration(seconds: 6),
         action: _hasTarget(msg.data)
-            ? SnackBarAction(label: 'Open', onPressed: () => _open(msg))
+            ? SnackBarAction(
+                label: 'Open',
+                onPressed: () => _openData(msg.data),
+              )
             : null,
       ),
     );
   }
 
+  static void _openJson(String? json) {
+    if (json == null || json.isEmpty) return;
+    try {
+      final d = jsonDecode(json);
+      if (d is Map) _openData(Map<String, dynamic>.from(d));
+    } catch (_) {}
+  }
+
   static bool _hasTarget(Map<String, dynamic> d) =>
       ['post', 'channel', 'premium', 'url'].contains(d['type']);
 
-  static void _open(RemoteMessage msg) {
-    final d = msg.data;
+  static void _openData(Map<String, dynamic> d) {
     final mid = d['mid'] as String?;
     if (mid != null && _installId != null) {
       unawaited(Backend.pushOpened(mid, _installId!).catchError((Object _) {}));
