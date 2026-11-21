@@ -1128,6 +1128,18 @@ reset role;
 select t.ok((select count(*) = 0 from public.push_tokens where install_id = '99999999-0000-0000-0000-000000000001'),
             'uninstalled phone''s token is removed');
 set role authenticated;
+select t.act_as('owner');
+select t.ok((select count(*) from public.admin_payment_orders_page('all', null, null, null, null, 'date_desc', 200, 0))
+              = (select count(*) from public.admin_payment_orders_list('all', null, null, null, null, 'date_desc', 1000)),
+            'payments in pages: all pages together = the full list');
+select t.ok((select count(*) <= 1 from public.admin_payment_orders_page('all', null, null, null, null, 'date_desc', 1, 0))
+            and not exists (select 1 from public.admin_payment_orders_page('all', null, null, null, null, 'date_desc', 1, 0) a
+                              join public.admin_payment_orders_page('all', null, null, null, null, 'date_desc', 1, 1) b on a.id = b.id),
+            'payments in pages: page 2 does not repeat page 1');
+select t.act_as('organic_user');
+select t.fails($$select * from public.admin_payment_orders_page()$$, 'app users cannot list payments');
+reset role;
+set role authenticated;
 select t.act_as('organic_user');
 select t.fails($$select public.admin_push_kick()$$, 'app users cannot trigger sending');
 select t.act_as('owner');

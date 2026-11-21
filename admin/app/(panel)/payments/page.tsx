@@ -15,6 +15,7 @@ import {
   Td,
   Th,
 } from "@/components/ui";
+import { Pager, pageParams } from "@/components/pager";
 import { requireOwner } from "@/lib/auth";
 import { dayEnd, dayStart, isDate } from "@/lib/dates";
 import { formatDate } from "@/lib/format";
@@ -93,6 +94,8 @@ type SP = {
   user?: string;
   min?: string;
   q?: string;
+  per?: string;
+  page?: string;
 };
 
 const views = [
@@ -423,7 +426,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       p_limit: 500,
     });
     loadError = error?.message;
-    const buyers = (data ?? []) as Buyer[];
+    const allBuyers = (data ?? []) as Buyer[];
+    const bp = pageParams(sp.per, sp.page, allBuyers.length);
+    const buyers = allBuyers.slice(bp.offset, bp.offset + bp.size);
+    const buyerPager = (
+      <Pager total={allBuyers.length} size={bp.size} page={bp.page} href={(patch) => query(sp, patch)} />
+    );
     const minFilters = [
       { value: "1", label: "All paying customers" },
       { value: "2", label: "Repeat buyers (2+)" },
@@ -434,7 +442,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         <SegmentTabs
           className="mb-3"
           items={minFilters.map((f) => ({
-            href: query({}, { view: "buyers", min: f.value, q: sp.q }),
+            href: query({}, { view: "buyers", min: f.value, q: sp.q, per: sp.per }),
             label: f.label,
             active: f.value === min,
           }))}
@@ -442,6 +450,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         <form className="mb-4 flex flex-wrap items-end gap-3">
           <input type="hidden" name="view" value="buyers" />
           <input type="hidden" name="min" value={min} />
+          {sp.per && <input type="hidden" name="per" value={sp.per} />}
           <label className="text-xs text-gray-600">
             Search email or name
             <Input name="q" defaultValue={sp.q ?? ""} placeholder="name@gmail.com" />
@@ -449,12 +458,14 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           <Button type="submit">Search</Button>
         </form>
         <p className="mb-3 text-sm text-gray-500">
-          {buyers.length} customer{buyers.length === 1 ? "" : "s"} · {buyers.filter((b) => b.purchases > 1).length}{" "}
-          bought more than once
+          {allBuyers.length} customer{allBuyers.length === 1 ? "" : "s"} ·{" "}
+          {allBuyers.filter((b) => b.purchases > 1).length} bought more than once
         </p>
         {buyers.length === 0 ? (
           <Empty>No customers match.</Empty>
         ) : (
+          <>
+          {buyerPager}
           <div className="space-y-3">
             {buyers.map((b) => (
               <Card key={b.user_id}>
@@ -515,6 +526,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
               </Card>
             ))}
           </div>
+          {buyerPager}
+          </>
         )}
       </>
     );
@@ -526,18 +539,25 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
       p_from: dayStart(sp.from),
       p_to: dayEnd(sp.to),
     };
-    const [{ data, error }, { data: totalsRow }] = await Promise.all([
-      supabase.rpc("admin_payment_orders_list", { ...filter, p_sort: sort, p_limit: 500 }),
-      supabase.rpc("admin_payment_orders_totals", filter),
-    ]);
-    loadError = error?.message;
-    const orders = (data ?? []) as Order[];
+    const { data: totalsRow } = await supabase.rpc("admin_payment_orders_totals", filter);
     const totals = (totalsRow ?? {}) as {
       orders?: number;
       successful?: number;
       received_paise?: number;
       test_orders?: number;
     };
+    const pg = pageParams(sp.per, sp.page, totals.orders ?? 0);
+    const { data, error } = await supabase.rpc("admin_payment_orders_page", {
+      ...filter,
+      p_sort: sort,
+      p_limit: pg.size,
+      p_offset: pg.offset,
+    });
+    loadError = error?.message;
+    const orders = (data ?? []) as Order[];
+    const pager = (
+      <Pager total={totals.orders ?? 0} size={pg.size} page={pg.page} href={(patch) => query(sp, patch)} />
+    );
     const { data: playRows } = orders.length
       ? await supabase.rpc("admin_play_report_rows", {
           p_ids: orders.map((o) => o.id),
@@ -557,7 +577,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         <SegmentTabs
           className="mb-3"
           items={filters.map((f) => ({
-            href: query(sp, { status: f.value }),
+            href: query(sp, { status: f.value, page: undefined }),
             label: f.label,
             active: f.value === status,
           }))}
@@ -566,6 +586,7 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
         <form className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
           <input type="hidden" name="view" value="orders" />
           <input type="hidden" name="status" value={status} />
+          {sp.per && <input type="hidden" name="per" value={sp.per} />}
           {user && <input type="hidden" name="user" value={user} />}
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-600">
             Plan
@@ -620,11 +641,12 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
           {status === "success" ? "Dates are when the payment was approved." : "Dates are when the order was made."}{" "}
           Successful and Received leave out your own test payments
           {totals.test_orders ? ` (${totals.test_orders} test payment${totals.test_orders === 1 ? "" : "s"} here)` : ""}.
-          {(totals.orders ?? 0) > orders.length && ` The list shows the first ${orders.length} orders.`}
         </p>
         {orders.length === 0 ? (
           <Empty>No orders.</Empty>
         ) : (
+          <>
+          {pager}
           <Table>
             <thead>
               <tr>
@@ -763,6 +785,8 @@ export default async function PaymentsPage({ searchParams }: { searchParams: Pro
               })}
             </tbody>
           </Table>
+          {pager}
+          </>
         )}
       </>
     );
