@@ -219,21 +219,22 @@ declare
   v jsonb;
 begin
   if not public.is_owner() then raise exception 'only the owner can see payment reports'; end if;
-  with inst as (
-    select i.install_id, i.first_user_id as user_id,
-           case when public.is_meta_ad_referrer(i.referrer_status, i.raw_referrer)
-                     or i.source = public.ad_source() then 'ads' else 'organic' end as grp
-      from public.installs i
-     where (p_from is null or i.created_at >= p_from) and (p_to is null or i.created_at < p_to)
-       and (i.first_user_id is null or not public.is_admin_user(i.first_user_id))
+  with pay as (
+    select o.user_id,
+           true as tried,
+           bool_or(o.status = 'approved') as paid,
+           bool_or(o.status in ('initiated', 'pending')) as open
+      from public.payment_orders o
+     group by o.user_id
   ), per as (
-    select n.grp, n.install_id,
-           exists (select 1 from public.payment_orders o where o.user_id = n.user_id) as tried,
-           exists (select 1 from public.payment_orders o where o.user_id = n.user_id and o.status = 'approved') as paid,
-           exists (select 1 from public.payment_orders o where o.user_id = n.user_id
-                    and o.status in ('initiated', 'pending')
-                    and not exists (select 1 from public.payment_orders a where a.user_id = n.user_id and a.status = 'approved')) as waiting
-      from inst n
+    select case when i.source = public.ad_source() then 'ads' else 'organic' end as grp,
+           coalesce(p.tried, false) as tried,
+           coalesce(p.paid, false) as paid,
+           coalesce(p.open and not p.paid, false) as waiting
+      from public.installs i
+      left join pay p on p.user_id = i.first_user_id
+     where (p_from is null or i.created_at >= p_from) and (p_to is null or i.created_at < p_to)
+       and not exists (select 1 from public.admins a where a.user_id = i.first_user_id)
   ), grp as (
     select g.grp,
            count(*) as installs,
@@ -246,7 +247,7 @@ begin
      group by g.grp
   ), ord as (
     select o.* from public.payment_orders o
-     where not public.is_admin_user(o.user_id)
+     where not exists (select 1 from public.admins a where a.user_id = o.user_id)
        and (p_from is null or o.created_at >= p_from) and (p_to is null or o.created_at < p_to)
   )
   select jsonb_build_object(
