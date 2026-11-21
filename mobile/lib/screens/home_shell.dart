@@ -348,66 +348,97 @@ class ConsentDialog extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Wrap(
-                      spacing: 4,
+                      spacing: 6,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        TextButton(
-                          onPressed: () => open('terms'),
-                          child: const Text('Terms & Conditions'),
-                        ),
-                        TextButton(
-                          onPressed: () => open('privacy'),
-                          child: const Text('Privacy Policy'),
-                        ),
-                        TextButton(
-                          onPressed: () => open('community'),
-                          child: const Text('Community Guidelines'),
-                        ),
+                        for (final (i, l) in const [
+                          ('terms', 'Terms'),
+                          ('privacy', 'Privacy'),
+                          ('community', 'Guidelines'),
+                        ].indexed) ...[
+                          if (i > 0)
+                            const Text('·', style: TextStyle(color: AppColors.subtle)),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(6),
+                            onTap: () => open(l.$1),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                              child: Text(
+                                l.$2,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(22, 8, 22, 22),
+            Container(
+              padding: const EdgeInsets.fromLTRB(22, 14, 22, 18),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'By tapping Agree you confirm you are 18 or older and '
-                    'accept the Terms and Privacy Policy.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: AppColors.subtle),
+                  SizedBox(
+                    height: 54,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                      icon: const Icon(Icons.verified_user_rounded, size: 20),
+                      onPressed: () async {
+                        await app.acceptConsent();
+                        if (context.mounted) Navigator.of(context).pop();
+                      },
+                      label: const Text(
+                        "I'm 18 or older — Agree",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 52),
-                          ),
-                          // Under 18 or doesn't accept: leave the app.
-                          onPressed: () => SystemNavigator.pop(),
-                          child: const Text('Not agree'),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 46,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.muted,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 3,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(0, 52),
-                          ),
-                          onPressed: () async {
-                            await app.acceptConsent();
-                            if (context.mounted) Navigator.of(context).pop();
-                          },
-                          child: const Text('I am 18+, Agree'),
-                        ),
-                      ),
-                    ],
+                      // Under 18 or doesn't accept: leave the app.
+                      onPressed: () => SystemNavigator.pop(),
+                      child: const Text("I don't agree — Exit", maxLines: 1),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'By tapping Agree you confirm you are 18 or older and accept '
+                    'the Terms and Privacy Policy.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11.5, height: 1.4, color: AppColors.subtle),
                   ),
                 ],
               ),
